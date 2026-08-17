@@ -811,7 +811,10 @@ function renderDashboardFoodGrid() {
         return item.timings && item.timings.includes(g_dashCategory);
     });
 
-    filtered.forEach(item => {
+    // Duplicate list for continuous infinite marquee scrolling
+    const displayItems = filtered.length > 0 ? [...filtered, ...filtered] : [];
+
+    displayItems.forEach(item => {
         const isAvailableInSession = item.category === 'drinks' || (item.timings && item.timings.includes(activeSession));
         const card = document.createElement('div');
         card.className = `food-card ${!isAvailableInSession ? 'item-unavailable' : ''}`;

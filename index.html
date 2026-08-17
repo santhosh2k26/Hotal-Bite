@@ -160,15 +160,13 @@
                                 <button class="dash-tab" data-dash-cat="drinks">Drinks</button>
                                 <button class="dash-tab" data-dash-cat="all">All Items</button>
                             </div>
-                            <div class="row-scroll-actions">
-                                <button class="row-scroll-btn" onclick="scrollDashFoodRow(-320)" title="Scroll Left"><i class="fa-solid fa-chevron-left"></i></button>
-                                <button class="row-scroll-btn" onclick="scrollDashFoodRow(320)" title="Scroll Right"><i class="fa-solid fa-chevron-right"></i></button>
-                            </div>
                         </div>
                     </div>
                     
-                    <div class="food-grid dashboard-food-grid" id="dashboard-food-grid">
-                        <!-- Horizontal food cards rendered dynamically by JS -->
+                    <div class="food-container">
+                        <div class="food-track" id="dashboard-food-grid">
+                            <!-- Rendered food cards + duplicated set for continuous scrolling -->
+                        </div>
                     </div>
                 </div>
 

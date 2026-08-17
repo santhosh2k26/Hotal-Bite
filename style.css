@@ -7,8 +7,8 @@
     --bg-secondary: #140E0A;
     --bg-card: rgba(20, 12, 6, 0.72);
     --bg-card-hover: rgba(32, 20, 10, 0.82);
-    --border-color: rgba(245, 158, 11, 0.25);
-    --border-hover: rgba(245, 158, 11, 0.45);
+    --border-color: transparent;
+    --border-hover: transparent;
 
     --bg-input: rgba(20, 12, 6, 0.85);
 
@@ -53,6 +53,36 @@
     padding: 0;
     box-sizing: border-box;
     font-family: var(--font-primary);
+}
+
+/* Universal Borderless Luxury Glassmorphism Box Rule */
+.app-header,
+.table-management-banner,
+.dashboard-food-showcase,
+.luxury-stat-card,
+.stat-card,
+.table-card,
+.food-card,
+.kitchen-card,
+.history-card,
+.settings-card,
+.login-card,
+.login-container,
+.ordering-cart-sidebar,
+.ordering-menu-area,
+.modal-card,
+.nav-link,
+.dash-tab,
+.category-tab,
+.btn,
+.search-box-wrapper,
+.stat-icon-wrapper,
+.order-id-badge,
+.session-indicator-badge,
+.food-add-btn,
+.row-scroll-btn {
+    border: none !important;
+    outline: none !important;
 }
 
 img {
@@ -799,6 +829,7 @@ p {
     gap: 10px;
     transition: var(--transition-smooth);
 }
+
 .nav-img-icon {
     width: 26px;
     height: 26px;
@@ -816,6 +847,7 @@ p {
     object-fit: contain;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }
+
 .nav-link:hover {
     color: #ffffff;
     background: rgba(255, 255, 255, 0.05);
@@ -967,7 +999,7 @@ p {
     background: rgba(18, 12, 8, 0.65);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--border-color);
+    border: none !important;
     border-radius: var(--radius-lg);
     padding: 28px;
     margin-bottom: 36px;
@@ -982,7 +1014,7 @@ p {
 
 .dash-tab {
     background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(245, 158, 11, 0.2);
+    border: none !important;
     color: var(--text-secondary);
     padding: 8px 16px;
     border-radius: 20px;
@@ -995,13 +1027,12 @@ p {
 .dash-tab:hover {
     background: rgba(245, 158, 11, 0.15);
     color: #ffffff;
-    border-color: var(--accent-light);
 }
 
 .dash-tab.active {
     background: linear-gradient(135deg, var(--accent-purple), var(--accent-light));
     color: #ffffff;
-    border-color: transparent;
+    border: none !important;
     box-shadow: 0 4px 15px rgba(245, 158, 11, 0.35);
 }
 
@@ -1012,69 +1043,54 @@ p {
     flex-wrap: wrap;
 }
 
-.row-scroll-actions {
+
+
+/* Continuous Infinite Auto-Scrolling Food Marquee */
+.food-container {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    padding-top: 14px;
+    padding-bottom: 14px;
+}
+
+.food-track {
     display: flex;
-    gap: 6px;
-    margin-left: auto;
+    width: max-content;
+    gap: 24px;
+    animation: foodScroll 55s linear infinite;
 }
 
-.row-scroll-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: var(--transition-bounce);
+.food-track:hover {
+    animation-play-state: paused;
 }
 
-.row-scroll-btn:hover {
-    background: var(--accent-purple);
-    color: #ffffff;
-    border-color: var(--accent-light);
-    transform: scale(1.08);
+.food-card {
+    flex: 0 0 250px !important;
+    width: 250px !important;
+    min-width: 250px !important;
+    max-width: 250px !important;
+    border: none !important;
 }
 
-/* Horizontal Food Row Slider */
-.dashboard-food-grid {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    gap: 16px !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    scroll-behavior: smooth !important;
-    -webkit-overflow-scrolling: touch !important;
-    padding-bottom: 12px !important;
-    padding-top: 6px !important;
-    margin-top: 18px !important;
-    width: 100% !important;
+.food-card img,
+.food-card .food-img {
+    width: 100%;
+    height: 170px;
+    object-fit: cover;
+    border-radius: 15px;
+    display: block;
 }
 
-.dashboard-food-grid::-webkit-scrollbar {
-    height: 6px;
+@keyframes foodScroll {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
 }
 
-.dashboard-food-grid::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 4px;
-}
-
-.dashboard-food-grid::-webkit-scrollbar-thumb {
-    background: rgba(245, 158, 11, 0.35);
-    border-radius: 4px;
-}
-
-.dashboard-food-grid .food-card {
-    flex: 0 0 175px !important;
-    width: 175px !important;
-    min-width: 175px !important;
-    max-width: 175px !important;
-}
 /* Table Management Luxury Hero Banner */
 .table-management-banner {
     position: relative;
@@ -1650,8 +1666,8 @@ p {
     background: var(--bg-card);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-subtle);
+    border: none !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
     transition: var(--transition-smooth);
     display: flex;
     flex-direction: column;
@@ -1661,8 +1677,8 @@ p {
 
 .food-card:hover {
     transform: translateY(-4px);
-    border-color: var(--border-hover);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), var(--shadow-glow);
+    border: none !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), var(--shadow-glow);
 }
 
 .food-card img,
@@ -1670,7 +1686,7 @@ p {
     position: relative;
     inset: auto;
     width: 100%;
-    height: 125px;
+    height: 150px;
     object-fit: cover;
     border-radius: 16px 16px 0 0;
     transition: var(--transition-bounce);
@@ -3223,6 +3239,7 @@ p {
 
 /* Small Smartphone Screen Optimization (< 600px) */
 @media (max-width: 600px) {
+
     .stats-grid,
     .stats-container {
         grid-template-columns: repeat(2, 1fr) !important;
