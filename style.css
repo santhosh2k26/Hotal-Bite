@@ -2853,7 +2853,7 @@ p {
 }
 
 /* ========================================================================= */
-/* 14. MODAL DIALOGS & OVERLAYS */
+/* 14. MODAL DIALOGS */
 /* ========================================================================= */
 .modal-overlay {
     position: fixed;
@@ -2915,62 +2915,6 @@ p {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
-}
-
-/* Mobile Phone Cart Drawer Overlay Sheet */
-.cart-drawer-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(4, 3, 10, 0.75);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    z-index: 1045;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.35s ease, visibility 0.35s ease;
-}
-
-.cart-drawer-overlay.active {
-    opacity: 1;
-    visibility: visible;
-}
-
-.cart-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.cart-close-mobile-btn {
-    display: none;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #ffffff;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background 0.2s ease;
-}
-
-.cart-close-mobile-btn:hover {
-    background: rgba(239, 68, 68, 0.3);
-    border-color: rgba(239, 68, 68, 0.5);
-}
-
-.mobile-sheet-handle {
-    display: none;
-    width: 42px;
-    height: 5px;
-    background: rgba(255, 255, 255, 0.25);
-    border-radius: 4px;
-    margin: 10px auto 0;
 }
 
 /* ========================================================================= */
@@ -3084,6 +3028,154 @@ p {
 /* 16. RESPONSIVE DESIGN - MEDIA QUERIES */
 /* ========================================================================= */
 
+/* ========================================================================= */
+/* 16. RESPONSIVE DESIGN - MEDIA QUERIES & MOBILE OVERLAYS */
+/* ========================================================================= */
+
+/* Navigation Backdrop Overlay */
+.nav-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 990;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.nav-overlay.open {
+    display: block;
+    opacity: 1;
+}
+
+/* Cart Drawer Backdrop Overlay */
+.cart-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 1040;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.cart-drawer-overlay.open {
+    display: block;
+    opacity: 1;
+}
+
+/* Cart Header Actions & Mobile Close Button */
+.cart-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cart-drawer-close-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: var(--transition-bounce);
+}
+
+.cart-drawer-close-btn:hover {
+    background: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+/* Floating Mobile Cart Action Bar */
+.mobile-cart-toggle-btn {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 16px;
+    right: 16px;
+    z-index: 999;
+    height: 60px;
+    padding: 0 20px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 50%, #B45309 100%);
+    border: 1.5px solid rgba(251, 191, 36, 0.5);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.4);
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: var(--transition-bounce);
+}
+
+.mobile-cart-toggle-btn:active {
+    transform: scale(0.98);
+}
+
+.mobile-cart-toggle-btn .cart-btn-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mobile-cart-toggle-btn .cart-btn-icon-wrap {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: #ffffff;
+}
+
+.mobile-cart-toggle-btn .cart-badge-count {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    background: #EF4444;
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 10px;
+    border: 1.5px solid #000000;
+    line-height: 1;
+}
+
+.mobile-cart-toggle-btn .cart-btn-label {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.02em;
+}
+
+.mobile-cart-toggle-btn .cart-btn-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mobile-cart-toggle-btn .cart-btn-total {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.mobile-cart-toggle-btn .cart-btn-arrow {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
 /* Large screens and Laptops */
 @media (max-width: 1200px) {
     .ordering-layout {
@@ -3111,41 +3203,34 @@ p {
         gap: 16px !important;
     }
 
-    /* Move current cart sidebar into a sleek overlay bottom sheet drawer on mobile/tablet */
+    /* Move current cart sidebar into an overlay drawer style on mobile/tablet */
     .ordering-cart-sidebar {
         position: fixed;
         bottom: 0;
-        left: 0;
         right: 0;
         width: 100%;
-        max-width: 100%;
-        height: 82vh;
-        max-height: 88vh;
+        max-width: 440px;
+        height: 85vh;
+        max-height: 85vh;
         z-index: 1050;
-        background: #0d091e;
+        background: #0e0a1a;
         border-radius: 28px 28px 0 0;
-        border: 1.5px solid rgba(197, 154, 98, 0.4);
-        border-bottom: none;
+        border-width: 1.5px 0 0 0;
+        border-color: rgba(245, 158, 11, 0.4);
         transform: translateY(100%);
-        transition: transform 0.38s cubic-bezier(0.165, 0.84, 0.44, 1);
-        box-shadow: 0 -10px 45px rgba(0, 0, 0, 0.95);
-        display: flex;
-        flex-direction: column;
+        transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
     }
 
     .ordering-cart-sidebar.open {
         transform: translateY(0);
-    }
-
-    .cart-close-mobile-btn {
-        display: flex;
-    }
-
-    .mobile-sheet-handle {
-        display: block;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.9);
     }
 
     .mobile-cart-toggle-btn {
+        display: flex;
+    }
+
+    .cart-drawer-close-btn {
         display: flex;
     }
 }
@@ -3356,44 +3441,52 @@ p {
         gap: 12px !important;
     }
 
-    /* Modal Dialogs optimization on Mobile Phones (< 600px) */
-    .modal-overlay {
-        padding: 14px !important;
-    }
-
-    .modal-card {
-        max-width: 100% !important;
-        width: 94% !important;
-        padding: 24px 18px !important;
-        border-radius: 24px !important;
-        margin: 0 auto !important;
-    }
-
-    .modal-icon-wrapper {
-        width: 52px !important;
-        height: 52px !important;
-        font-size: 1.5rem !important;
-        margin-bottom: 14px !important;
-    }
-
-    .modal-card h3 {
-        font-size: 1.25rem !important;
-    }
-
-    .modal-card p {
-        font-size: 0.88rem !important;
-        margin-bottom: 18px !important;
-    }
-
-    .modal-buttons {
-        grid-template-columns: 1fr !important;
+    .food-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
         gap: 10px !important;
     }
 
-    .modal-buttons .btn {
-        width: 100% !important;
-        padding: 12px 16px !important;
-        font-size: 0.95rem !important;
+    .food-card img,
+    .food-card .food-img {
+        height: 110px !important;
+    }
+}
+
+/* Very Small Mobile Screens (< 480px) */
+@media (max-width: 480px) {
+    .login-card.luxury-card {
+        padding: 32px 18px !important;
+        border-radius: 24px !important;
+    }
+
+    .hotel-brand-title {
+        font-size: 1.4rem !important;
+        letter-spacing: 0.14em !important;
+    }
+
+    .hotel-crest {
+        width: 64px !important;
+        height: 64px !important;
+    }
+
+    .crest-letter {
+        font-size: 2.1rem !important;
+    }
+
+    .brand-name {
+        font-size: 1.1rem;
+    }
+
+    .app-header {
+        padding: 0 12px;
+    }
+
+    .mobile-cart-toggle-btn {
+        bottom: 12px;
+        left: 12px;
+        right: 12px;
+        padding: 0 14px;
+        height: 56px;
     }
 }
 

@@ -350,10 +350,16 @@ function showSection(sectionId) {
         }
     });
 
-    // Hide mobile navigation drawer & cart drawer on select
+    // Hide mobile navigation drawer & overlays on section change
     const appNav = document.querySelector('.app-nav');
+    const navOverlay = document.getElementById('nav-overlay');
     if (appNav) appNav.classList.remove('open');
-    if (typeof closeMobileCart === 'function') closeMobileCart();
+    if (navOverlay) navOverlay.classList.remove('open');
+
+    const cartSidebar = document.getElementById('live-cart-sidebar');
+    const cartOverlay = document.getElementById('cart-drawer-overlay');
+    if (cartSidebar) cartSidebar.classList.remove('open');
+    if (cartOverlay) cartOverlay.classList.remove('open');
 
     // Change background decoration food images depending on page target
     const deco1 = document.querySelector('.deco-1');
@@ -444,36 +450,6 @@ function closeConfirmModal() {
     g_modalCallback = null;
 }
 
-// Mobile Phone Cart Modal Bottom Sheet Helpers
-function openMobileCart() {
-    const sidebar = document.getElementById('live-cart-sidebar');
-    const overlay = document.getElementById('cart-drawer-overlay');
-    if (sidebar) sidebar.classList.add('open');
-    if (overlay) {
-        overlay.classList.remove('hidden');
-        overlay.classList.add('active');
-    }
-}
-
-function closeMobileCart() {
-    const sidebar = document.getElementById('live-cart-sidebar');
-    const overlay = document.getElementById('cart-drawer-overlay');
-    if (sidebar) sidebar.classList.remove('open');
-    if (overlay) {
-        overlay.classList.remove('active');
-        overlay.classList.add('hidden');
-    }
-}
-
-function toggleMobileCart() {
-    const sidebar = document.getElementById('live-cart-sidebar');
-    if (sidebar && sidebar.classList.contains('open')) {
-        closeMobileCart();
-    } else {
-        openMobileCart();
-    }
-}
-
 // =========================================================================
 // 5. ATTACH GENERAL EVENT LISTENERS
 // =========================================================================
@@ -560,10 +536,54 @@ function attachEventListeners() {
         });
     });
 
-    // Mobile Navigation burger button toggle
-    document.getElementById('mobile-menu-toggle').addEventListener('click', () => {
-        document.querySelector('.app-nav').classList.toggle('open');
-    });
+    // Mobile Navigation burger button toggle & overlay
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const navOverlay = document.getElementById('nav-overlay');
+    const appNav = document.querySelector('.app-nav');
+
+    if (mobileMenuToggle && appNav) {
+        mobileMenuToggle.addEventListener('click', () => {
+            const isOpen = appNav.classList.toggle('open');
+            if (navOverlay) navOverlay.classList.toggle('open', isOpen);
+        });
+    }
+
+    if (navOverlay && appNav) {
+        navOverlay.addEventListener('click', () => {
+            appNav.classList.remove('open');
+            navOverlay.classList.remove('open');
+        });
+    }
+
+    // Mobile Live Cart Drawer Toggle & Backdrop Overlay
+    const mobileCartToggleBtn = document.getElementById('mobile-cart-toggle-btn');
+    const liveCartSidebar = document.getElementById('live-cart-sidebar');
+    const cartDrawerOverlay = document.getElementById('cart-drawer-overlay');
+    const cartDrawerCloseBtn = document.getElementById('cart-drawer-close-btn');
+
+    function toggleMobileCartDrawer(open) {
+        if (!liveCartSidebar) return;
+        const isCurrentlyOpen = liveCartSidebar.classList.contains('open');
+        const shouldOpen = open !== undefined ? open : !isCurrentlyOpen;
+
+        if (shouldOpen) {
+            liveCartSidebar.classList.add('open');
+            if (cartDrawerOverlay) cartDrawerOverlay.classList.add('open');
+        } else {
+            liveCartSidebar.classList.remove('open');
+            if (cartDrawerOverlay) cartDrawerOverlay.classList.remove('open');
+        }
+    }
+
+    if (mobileCartToggleBtn) {
+        mobileCartToggleBtn.addEventListener('click', () => toggleMobileCartDrawer(true));
+    }
+    if (cartDrawerCloseBtn) {
+        cartDrawerCloseBtn.addEventListener('click', () => toggleMobileCartDrawer(false));
+    }
+    if (cartDrawerOverlay) {
+        cartDrawerOverlay.addEventListener('click', () => toggleMobileCartDrawer(false));
+    }
 
     // 4. ORDERING BACK BUTTONS
     document.getElementById('btn-back-to-dash-from-menu').addEventListener('click', () => {
@@ -722,28 +742,16 @@ function attachEventListeners() {
         showToast('History filters reset.', 'info');
     });
 
-    // Mobile Cart overlay sheet toggle & backdrop close
-    const mobileCartBtn = document.getElementById('mobile-cart-toggle-btn');
-    if (mobileCartBtn) mobileCartBtn.addEventListener('click', toggleMobileCart);
+    // Mobile Cart overlay toggle
+    document.getElementById('mobile-cart-toggle-btn').addEventListener('click', () => {
+        document.getElementById('live-cart-sidebar').classList.toggle('open');
+    });
 
-    const closeCartMobileBtn = document.getElementById('cart-close-mobile-btn');
-    if (closeCartMobileBtn) closeCartMobileBtn.addEventListener('click', closeMobileCart);
-
-    const cartOverlay = document.getElementById('cart-drawer-overlay');
-    if (cartOverlay) cartOverlay.addEventListener('click', closeMobileCart);
-
-    // Modal click buttons & backdrop click
+    // Modal click buttons
     document.getElementById('modal-cancel-btn').addEventListener('click', closeConfirmModal);
     document.getElementById('modal-confirm-btn').addEventListener('click', () => {
         if (g_modalCallback) g_modalCallback();
     });
-
-    const confirmOverlay = document.getElementById('modal-overlay');
-    if (confirmOverlay) {
-        confirmOverlay.addEventListener('click', (e) => {
-            if (e.target === confirmOverlay) closeConfirmModal();
-        });
-    }
 }
 
 // =========================================================================
@@ -1192,7 +1200,10 @@ function renderCart() {
         document.getElementById('cart-subtotal').textContent = '₹0';
         document.getElementById('cart-tax').textContent = '₹0';
         document.getElementById('cart-total').textContent = '₹0';
-        document.getElementById('mobile-cart-badge-count').textContent = '0';
+        const badgeCount = document.getElementById('mobile-cart-badge-count');
+        const floatTotal = document.getElementById('mobile-cart-float-total');
+        if (badgeCount) badgeCount.textContent = '0';
+        if (floatTotal) floatTotal.textContent = '₹0';
         return;
     }
 
@@ -1232,8 +1243,11 @@ function renderCart() {
     document.getElementById('cart-tax').textContent = `₹${tax}`;
     document.getElementById('cart-total').textContent = `₹${grandTotal}`;
     
-    // Update floating mobile cart count
-    document.getElementById('mobile-cart-badge-count').textContent = table.itemsCount;
+    // Update floating mobile cart badge & total
+    const badgeCount = document.getElementById('mobile-cart-badge-count');
+    const floatTotal = document.getElementById('mobile-cart-float-total');
+    if (badgeCount) badgeCount.textContent = table.itemsCount;
+    if (floatTotal) floatTotal.textContent = `₹${grandTotal}`;
 }
 
 // Add item to active order

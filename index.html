@@ -130,10 +130,13 @@
             </div>
             
             <!-- Mobile Menu Toggle -->
-            <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle Navigation">
                 <i class="fa-solid fa-bars"></i>
             </button>
         </header>
+
+        <!-- Mobile Navigation Backdrop Overlay -->
+        <div class="nav-overlay" id="nav-overlay"></div>
 
         <!-- Main Wrapper for Content Views -->
         <main class="app-content">
@@ -344,12 +347,7 @@
                     </div>
 
                     <!-- Right Sidebar Live Cart Drawer -->
-                    <!-- Backdrop overlay for mobile phone cart sheet modal -->
-                    <div class="cart-drawer-overlay hidden" id="cart-drawer-overlay"></div>
-
-                    <!-- Right Sidebar Live Cart Drawer / Mobile Bottom Sheet -->
                     <div class="ordering-cart-sidebar" id="live-cart-sidebar">
-                        <div class="mobile-sheet-handle"></div>
                         <div class="cart-header">
                             <div class="cart-title">
                                 <i class="fa-solid fa-basket-shopping"></i>
@@ -357,7 +355,7 @@
                             </div>
                             <div class="cart-header-actions">
                                 <div class="cart-meta" id="cart-table-badge">Table 01</div>
-                                <button class="cart-close-mobile-btn" id="cart-close-mobile-btn" aria-label="Close Cart">
+                                <button class="cart-drawer-close-btn" id="cart-drawer-close-btn" aria-label="Close Cart">
                                     <i class="fa-solid fa-xmark"></i>
                                 </button>
                             </div>
@@ -394,10 +392,22 @@
                     </div>
                 </div>
 
-                <!-- Floating Mobile Cart Toggle button -->
-                <button class="mobile-cart-toggle-btn" id="mobile-cart-toggle-btn" aria-label="View Order Cart">
-                    <i class="fa-solid fa-basket-shopping"></i>
-                    <span class="cart-badge-count" id="mobile-cart-badge-count">0</span>
+                <!-- Backdrop Overlay for Mobile Cart Drawer -->
+                <div class="cart-drawer-overlay" id="cart-drawer-overlay"></div>
+
+                <!-- Floating Mobile Cart Action Bar -->
+                <button class="mobile-cart-toggle-btn" id="mobile-cart-toggle-btn" aria-label="View Current Order">
+                    <div class="cart-btn-left">
+                        <div class="cart-btn-icon-wrap">
+                            <i class="fa-solid fa-basket-shopping"></i>
+                            <span class="cart-badge-count" id="mobile-cart-badge-count">0</span>
+                        </div>
+                        <span class="cart-btn-label">View Order</span>
+                    </div>
+                    <div class="cart-btn-right">
+                        <span class="cart-btn-total" id="mobile-cart-float-total">₹0</span>
+                        <i class="fa-solid fa-chevron-right cart-btn-arrow"></i>
+                    </div>
                 </button>
             </section>
 
