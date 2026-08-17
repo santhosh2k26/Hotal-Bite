@@ -351,8 +351,8 @@ function showSection(sectionId) {
     });
 
     // Hide mobile navigation drawer on select
-    document.getElementById('category-tabs-list').parentElement.classList.remove('open');
-    document.querySelector('.app-nav').classList.remove('open');
+    const appNav = document.querySelector('.app-nav');
+    if (appNav) appNav.classList.remove('open');
 
     // Change background decoration food images depending on page target
     const deco1 = document.querySelector('.deco-1');
