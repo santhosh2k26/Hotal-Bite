@@ -1574,8 +1574,8 @@ p {
 
 .food-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+    gap: 16px;
 }
 
 /* Food Cards - Swiggy Style Compact Cards */
@@ -1601,11 +1601,12 @@ p {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), var(--shadow-glow);
 }
 
-.food-card img {
+.food-card img,
+.food-card .food-img {
     position: relative;
     inset: auto;
     width: 100%;
-    height: 140px;
+    height: 125px;
     object-fit: cover;
     border-radius: 16px 16px 0 0;
     transition: var(--transition-bounce);
