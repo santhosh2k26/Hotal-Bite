@@ -585,30 +585,6 @@ function attachEventListeners() {
         cartDrawerOverlay.addEventListener('click', () => toggleMobileCartDrawer(false));
     }
 
-    // QR Modal Trigger Handlers
-    const showQrBtn = document.getElementById('btn-show-qr-modal');
-    const qrModalOverlay = document.getElementById('qr-modal-overlay');
-    const qrModalCloseBtn = document.getElementById('qr-modal-close-btn');
-    const qrModalDoneBtn = document.getElementById('qr-modal-done-btn');
-
-    if (showQrBtn && qrModalOverlay) {
-        showQrBtn.addEventListener('click', () => {
-            qrModalOverlay.classList.remove('hidden');
-        });
-    }
-
-    if (qrModalCloseBtn && qrModalOverlay) {
-        qrModalCloseBtn.addEventListener('click', () => {
-            qrModalOverlay.classList.add('hidden');
-        });
-    }
-
-    if (qrModalDoneBtn && qrModalOverlay) {
-        qrModalDoneBtn.addEventListener('click', () => {
-            qrModalOverlay.classList.add('hidden');
-        });
-    }
-
     // 4. ORDERING BACK BUTTONS
     document.getElementById('btn-back-to-dash-from-menu').addEventListener('click', () => {
         saveActiveTableState();
@@ -738,10 +714,52 @@ function attachEventListeners() {
         showToast('Preparing download... Invoice saved to PDF format successfully.', 'success');
     });
 
+    let g_pendingPayOrderId = null;
+
+    function openQRModal(orderId) {
+        const order = g_orders.find(o => o.orderId === orderId);
+        const amount = order ? order.total : 0;
+        g_pendingPayOrderId = orderId;
+
+        const amountEl = document.getElementById('qr-modal-amount-display');
+        if (amountEl) amountEl.textContent = `₹${amount}`;
+
+        const qrModal = document.getElementById('qr-modal-overlay');
+        if (qrModal) qrModal.classList.remove('hidden');
+    }
+
+    function closeQRModal() {
+        const qrModal = document.getElementById('qr-modal-overlay');
+        if (qrModal) qrModal.classList.add('hidden');
+    }
+
+    const btnShowQR = document.getElementById('btn-show-qr-modal');
+    if (btnShowQR) {
+        btnShowQR.addEventListener('click', () => {
+            const orderId = document.getElementById('bill-order-id').textContent;
+            openQRModal(orderId);
+        });
+    }
+
     document.getElementById('btn-bill-pay').addEventListener('click', () => {
         const orderId = document.getElementById('bill-order-id').textContent;
-        markOrderPaid(orderId);
+        openQRModal(orderId);
     });
+
+    const qrCloseBtn = document.getElementById('qr-modal-close-btn');
+    const qrDoneBtn = document.getElementById('qr-modal-done-btn');
+    const qrConfirmPayBtn = document.getElementById('qr-modal-confirm-pay-btn');
+
+    if (qrCloseBtn) qrCloseBtn.addEventListener('click', closeQRModal);
+    if (qrDoneBtn) qrDoneBtn.addEventListener('click', closeQRModal);
+    if (qrConfirmPayBtn) {
+        qrConfirmPayBtn.addEventListener('click', () => {
+            if (g_pendingPayOrderId) {
+                markOrderPaid(g_pendingPayOrderId);
+            }
+            closeQRModal();
+        });
+    }
 
     document.getElementById('btn-bill-deliver').addEventListener('click', () => {
         if (g_activeTableId) {
