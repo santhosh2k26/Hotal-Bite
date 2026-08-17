@@ -1107,160 +1107,6 @@ function initMenu() {
     renderMenu();
 }
 
-// Helper to build a single food card DOM element matching existing HTML/CSS design
-function createFoodCardElement(item) {
-    let cartQty = 0;
-    if (g_activeTableId) {
-        const table = g_tables.find(t => t.id === g_activeTableId);
-        if (table) {
-            const cartItem = table.items.find(i => i.name === item.name);
-            if (cartItem) cartQty = cartItem.qty;
-        }
-    }
-
-    const activeSession = getActiveSessionByTime();
-    const isAvailableInSession = item.timings && item.timings.includes(activeSession);
-
-    const card = document.createElement('div');
-    card.className = `food-card ${!isAvailableInSession ? 'item-unavailable' : ''}`;
-    card.setAttribute('data-food-name', item.name);
-
-    const vegClass = item.isVeg ? 'veg' : 'nonveg';
-    const vegIcon = item.isVeg ? 'fa-circle' : 'fa-play';
-    const vegText = item.isVeg ? 'VEG' : 'NON-VEG';
-
-    const imgMarkup = item.image 
-        ? `<img src="${item.image}" alt="${item.name}" class="food-img" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop';">` 
-        : `<div class="food-img-placeholder"><i class="fa-solid ${getCategoryIcon(item.category)}"></i></div>`;
-
-    const safeName = item.name.replace(/'/g, "\\'");
-
-    let actionBtnHtml = '';
-    if (cartQty > 0) {
-        actionBtnHtml = `
-            <div class="quantity-selector">
-                <button class="quantity-btn min-btn" onclick="updateItemQuantity('${safeName}', -1)"><i class="fa-solid fa-minus"></i></button>
-                <span class="quantity-val">${cartQty}</span>
-                <button class="quantity-btn add-btn" onclick="updateItemQuantity('${safeName}', 1)"><i class="fa-solid fa-plus"></i></button>
-            </div>
-        `;
-    } else if (isAvailableInSession) {
-        actionBtnHtml = `<button class="food-add-btn" onclick="addItemToOrder('${safeName}', ${item.price})">ADD</button>`;
-    } else {
-        actionBtnHtml = `<button class="food-add-btn disabled-btn" title="Not available in current session" onclick="showUnavailableToast('${safeName}')">Unavailable</button>`;
-    }
-
-    card.innerHTML = `
-        ${imgMarkup}
-        <div class="food-content">
-            <span class="veg-indicator ${vegClass}">
-                <i class="fa-solid ${vegIcon}"></i> ${vegText}
-            </span>
-            <h4>${item.name}</h4>
-            <p class="desc">${item.desc || ''}</p>
-            <div class="food-card-footer">
-                ${actionBtnHtml}
-            </div>
-        </div>
-    `;
-
-    return card;
-}
-
-// In-place UI update for single food card button without full menu re-render or scroll jump
-function updateSingleFoodCardUI(name) {
-    const escName = name.replace(/"/g, '\\"');
-    const cards = document.querySelectorAll(`.food-card[data-food-name="${escName}"]`);
-    if (!cards || cards.length === 0) return;
-
-    const item = FOOD_MENU.find(i => i.name === name);
-    if (!item) return;
-
-    let cartQty = 0;
-    if (g_activeTableId) {
-        const table = g_tables.find(t => t.id === g_activeTableId);
-        if (table) {
-            const cartItem = table.items.find(i => i.name === name);
-            if (cartItem) cartQty = cartItem.qty;
-        }
-    }
-
-    const activeSession = getActiveSessionByTime();
-    const isAvailableInSession = item.timings && item.timings.includes(activeSession);
-    const safeName = item.name.replace(/'/g, "\\'");
-
-    cards.forEach(card => {
-        const footer = card.querySelector('.food-card-footer');
-        if (!footer) return;
-
-        if (cartQty > 0) {
-            footer.innerHTML = `
-                <div class="quantity-selector">
-                    <button class="quantity-btn min-btn" onclick="updateItemQuantity('${safeName}', -1)"><i class="fa-solid fa-minus"></i></button>
-                    <span class="quantity-val">${cartQty}</span>
-                    <button class="quantity-btn add-btn" onclick="updateItemQuantity('${safeName}', 1)"><i class="fa-solid fa-plus"></i></button>
-                </div>
-            `;
-        } else if (isAvailableInSession) {
-            footer.innerHTML = `<button class="food-add-btn" onclick="addItemToOrder('${safeName}', ${item.price})">ADD</button>`;
-        } else {
-            footer.innerHTML = `<button class="food-add-btn disabled-btn" title="Not available in current session" onclick="showUnavailableToast('${safeName}')">Unavailable</button>`;
-        }
-    });
-}
-
-// Append new food item directly into its specific category list without resetting scroll or re-rendering entire section
-function addNewFoodCard(itemData) {
-    if (!itemData || !itemData.name) return;
-
-    // Add to FOOD_MENU dataset if missing
-    let item = FOOD_MENU.find(i => i.name.toLowerCase() === itemData.name.toLowerCase());
-    if (!item) {
-        item = {
-            id: itemData.id || `food_${Date.now()}`,
-            name: itemData.name,
-            category: itemData.category || 'main',
-            price: parseInt(itemData.price) || 0,
-            desc: itemData.desc || '',
-            isVeg: itemData.isVeg !== undefined ? itemData.isVeg : true,
-            image: itemData.image || '',
-            timings: itemData.timings || ['breakfast', 'lunch', 'snacks', 'dinner', 'drinks']
-        };
-        FOOD_MENU.push(item);
-    }
-
-    const cat = item.category || 'main';
-    const grid = document.getElementById(`${cat}-items-grid`);
-    const section = document.getElementById(`sec-${cat}-items`);
-
-    if (grid) {
-        // Build card element using shared template
-        const card = createFoodCardElement(item);
-        
-        // Append directly to the specific category list
-        grid.appendChild(card);
-
-        // Reveal parent category section if hidden
-        if (section) {
-            section.classList.remove('hidden');
-        }
-
-        // Hide empty menu indicator
-        const emptyState = document.getElementById('empty-menu-state');
-        if (emptyState) {
-            emptyState.classList.add('hidden');
-        }
-
-        return card;
-    }
-}
-
-// Expose helper methods to window for global access
-window.createFoodCardElement = createFoodCardElement;
-window.updateSingleFoodCardUI = updateSingleFoodCardUI;
-window.addNewFoodCard = addNewFoodCard;
-window.addFoodItem = addNewFoodCard;
-
 function renderMenu() {
     const categories = ['main', 'secondary', 'snacks', 'drinks', 'desserts'];
     let overallMatchCount = 0;
@@ -1300,7 +1146,56 @@ function renderMenu() {
         }
 
         filtered.forEach(item => {
-            const card = createFoodCardElement(item);
+            // Check active quantity in cart
+            let cartQty = 0;
+            if (g_activeTableId) {
+                const table = g_tables.find(t => t.id === g_activeTableId);
+                const cartItem = table.items.find(i => i.name === item.name);
+                if (cartItem) cartQty = cartItem.qty;
+            }
+
+            const activeSession = getActiveSessionByTime();
+            const isAvailableInSession = item.timings && item.timings.includes(activeSession);
+
+            const card = document.createElement('div');
+            card.className = `food-card ${!isAvailableInSession ? 'item-unavailable' : ''}`;
+
+            const vegClass = item.isVeg ? 'veg' : 'nonveg';
+            const vegIcon = item.isVeg ? 'fa-circle' : 'fa-play';
+            const vegText = item.isVeg ? 'VEG' : 'NON-VEG';
+
+            const imgMarkup = item.image 
+                ? `<img src="${item.image}" alt="${item.name}" class="food-img" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop';">` 
+                : `<div class="food-img-placeholder"><i class="fa-solid ${getCategoryIcon(item.category)}"></i></div>`;
+
+            let actionBtnHtml = '';
+            if (cartQty > 0) {
+                actionBtnHtml = `
+                    <div class="quantity-selector">
+                        <button class="quantity-btn min-btn" onclick="updateItemQuantity('${item.name}', -1)"><i class="fa-solid fa-minus"></i></button>
+                        <span class="quantity-val">${cartQty}</span>
+                        <button class="quantity-btn add-btn" onclick="updateItemQuantity('${item.name}', 1)"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                `;
+            } else if (isAvailableInSession) {
+                actionBtnHtml = `<button class="food-add-btn" onclick="addItemToOrder('${item.name}', ${item.price})">ADD</button>`;
+            } else {
+                actionBtnHtml = `<button class="food-add-btn disabled-btn" title="Not available in current session" onclick="showUnavailableToast('${item.name}')">Unavailable</button>`;
+            }
+
+            card.innerHTML = `
+                ${imgMarkup}
+                <div class="food-content">
+                    <span class="veg-indicator ${vegClass}">
+                        <i class="fa-solid ${vegIcon}"></i> ${vegText}
+                    </span>
+                    <h4>${item.name}</h4>
+                    <p class="desc">${item.desc}</p>
+                    <div class="food-card-footer">
+                    ${actionBtnHtml}
+                </div>
+                </div>
+            `;
             grid.appendChild(card);
         });
     });
@@ -1367,9 +1262,9 @@ function renderCart() {
                 <p class="cart-item-price-calc">₹${item.price} &times; ${item.qty}</p>
             </div>
             <div class="quantity-selector">
-                <button class="quantity-btn" onclick="updateItemQuantity('${item.name.replace(/'/g, "\\'")}', -1)"><i class="fa-solid fa-minus"></i></button>
+                <button class="quantity-btn" onclick="updateItemQuantity('${item.name}', -1)"><i class="fa-solid fa-minus"></i></button>
                 <span class="quantity-val">${item.qty}</span>
-                <button class="quantity-btn" onclick="updateItemQuantity('${item.name.replace(/'/g, "\\'")}', 1)"><i class="fa-solid fa-plus"></i></button>
+                <button class="quantity-btn" onclick="updateItemQuantity('${item.name}', 1)"><i class="fa-solid fa-plus"></i></button>
             </div>
             <div class="cart-item-total">₹${rowTotal}</div>
         `;
@@ -1419,9 +1314,9 @@ function addItemToOrder(name, price) {
     // Add item with qty 1
     table.items.push({ name, price, qty: 1 });
     
-    // Update state targeted in-place without resetting scroll or re-rendering menu
+    // Update state
     renderCart();
-    updateSingleFoodCardUI(name);
+    renderMenu();
     showToast(`Added ${name} to cart.`, 'success');
 }
 
@@ -1455,9 +1350,8 @@ function updateItemQuantity(name, delta) {
         }
     }
 
-    // Update state targeted in-place without resetting scroll or re-rendering menu
     renderCart();
-    updateSingleFoodCardUI(name);
+    renderMenu();
 }
 
 // =========================================================================

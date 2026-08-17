@@ -1665,6 +1665,8 @@ p {
 /* Food Cards - Swiggy Style Compact Cards */
 .food-card {
     position: relative;
+    width: 100%;
+    min-height: 280px;
     overflow: hidden;
     border-radius: 16px;
     background: var(--bg-card);
@@ -1676,7 +1678,6 @@ p {
     display: flex;
     flex-direction: column;
     height: 100%;
-    min-height: auto;
 }
 
 .food-card:hover {
@@ -1690,7 +1691,7 @@ p {
     position: relative;
     inset: auto;
     width: 100%;
-    height: 150px;
+    height: 180px;
     object-fit: cover;
     border-radius: 16px 16px 0 0;
     transition: var(--transition-bounce);
