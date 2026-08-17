@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>HostelBite Dashboard</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background-color: #0B0806;
+            color: #FFF8F0;
+        }
+
+        header {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 35px;
+            background: rgba(20, 12, 6, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(245, 158, 11, 0.25);
+        }
+
+        .logo {
+            font-size: 26px;
+            font-weight: bold;
+        }
+
+        .user {
+            color: #F59E0B;
+        }
+
+        .logout {
+            margin-left: 25px;
+            padding: 10px 18px;
+            border: 1px solid #F59E0B;
+            border-radius: 8px;
+            background: transparent;
+            color: #FFF8F0;
+            cursor: pointer;
+        }
+
+        main {
+            padding: 45px;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .welcome {
+            color: #C8BFB5;
+            margin-bottom: 40px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+        }
+
+        .card {
+            padding: 30px;
+            border: 1px solid rgba(245, 158, 11, 0.25);
+            border-radius: 18px;
+            background: rgba(20, 12, 6, 0.72);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .number {
+            font-size: 35px;
+            color: #F59E0B;
+            margin-top: 15px;
+        }
+
+        .go-full-app {
+            margin-top: 35px;
+            display: inline-block;
+            padding: 14px 28px;
+            border-radius: 12px;
+            background: linear-gradient(90deg, #F59E0B, #FBBF24);
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<header>
+
+    <div class="logo">
+        🍴 HostelBite
+    </div>
+
+    <div>
+        <span class="user" id="userInfo"></span>
+
+        <button class="logout" onclick="logout()">
+            Logout
+        </button>
+    </div>
+
+</header>
+
+
+<main>
+
+    <h1>Dashboard</h1>
+
+    <p class="welcome" id="welcome"></p>
+
+
+    <div class="cards">
+
+        <div class="card">
+            <h3>Total Tables</h3>
+            <div class="number">10</div>
+        </div>
+
+        <div class="card">
+            <h3>Today's Orders</h3>
+            <div class="number">24</div>
+        </div>
+
+        <div class="card">
+            <h3>Pending Orders</h3>
+            <div class="number">7</div>
+        </div>
+
+        <div class="card">
+            <h3>Available Food</h3>
+            <div class="number">18</div>
+        </div>
+
+    </div>
+
+    <a href="index.html" class="go-full-app">Launch Full Table Management System ➜</a>
+
+</main>
+
+
+<script>
+
+    /*
+        Check login
+    */
+
+    const loginUser =
+        sessionStorage.getItem("loggedInUser") || localStorage.getItem("hb_current_user");
+
+
+    if (!loginUser) {
+
+        window.location.href = "login.html";
+
+    }
+
+
+    const user = typeof loginUser === "string" && loginUser.startsWith("{") ? JSON.parse(loginUser) : { username: loginUser, role: "Staff" };
+
+
+    document.getElementById("userInfo").textContent =
+        user.username + " (" + (user.role || "Staff") + ")";
+
+
+    document.getElementById("welcome").textContent =
+        "Welcome, " + user.username + "!";
+
+
+    /*
+        LOGOUT
+    */
+
+    function logout() {
+
+        /*
+            Remove current login
+        */
+
+        sessionStorage.clear();
+        localStorage.removeItem("hb_current_user");
+
+
+        /*
+            Go back to login
+        */
+
+        window.location.href = "login.html";
+
+    }
+
+</script>
+
+</body>
+</html>

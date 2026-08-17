@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#78350F"/>
+      <stop offset="50%" stop-color="#B45309"/>
+      <stop offset="100%" stop-color="#451A03"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FEF08A"/>
+      <stop offset="50%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#92400E"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <rect width="100" height="100" rx="22" fill="url(#bgGrad)" stroke="#F59E0B" stroke-width="2"/>
+  
+  <g filter="url(#shadow)" transform="translate(18, 18)">
+    <!-- 3D Pie Chart Icon -->
+    <path d="M 32 4 A 28 28 0 0 1 60 32 L 32 32 Z" fill="url(#goldGrad)" transform="translate(4, -4)"/>
+    <path d="M 32 32 L 60 32 A 28 28 0 1 1 32 4 Z" fill="url(#goldGrad)" opacity="0.85"/>
+    <circle cx="32" cy="32" r="8" fill="#451A03"/>
+  </g>
+</svg>

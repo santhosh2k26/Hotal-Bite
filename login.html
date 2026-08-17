@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HostelBite - Luxury Login</title>
+    <!-- Google Fonts - Inter & Cinzel -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(rgba(8, 5, 8, 0.52), rgba(8, 5, 8, 0.72)), url('images/login_hotel_bg.jpg') center center / cover no-repeat fixed;
+            color: #FFF8F0;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 440px;
+            padding: 48px 42px;
+            border: 1px solid rgba(197, 154, 98, 0.35);
+            border-radius: 36px;
+            background: rgba(14, 11, 10, 0.84);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 50px rgba(197, 154, 98, 0.12);
+            text-align: center;
+        }
+
+        .hotel-crest {
+            width: 78px;
+            height: 78px;
+            margin: 0 auto 18px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(212, 163, 107, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: radial-gradient(circle, rgba(212, 163, 107, 0.15) 0%, rgba(14, 11, 10, 0.4) 100%);
+            box-shadow: 0 0 25px rgba(212, 163, 107, 0.25);
+        }
+
+        .hotel-crest::before {
+            content: '';
+            position: absolute;
+            inset: -5px;
+            border-radius: 50%;
+            border: 1px dashed rgba(212, 163, 107, 0.35);
+        }
+
+        .crest-letter {
+            font-family: 'Times New Roman', 'Cinzel', serif;
+            font-size: 2.6rem;
+            font-weight: 700;
+            color: #D4A36B;
+            background: linear-gradient(135deg, #F5D7B2 0%, #D4A36B 60%, #9E6B38 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 1.75rem;
+            font-weight: 800;
+            letter-spacing: 0.22em;
+            color: #F5D7B2;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.22em;
+            color: #BCA38A;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+        }
+
+        .luxury-divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .luxury-divider::before,
+        .luxury-divider::after {
+            content: '';
+            height: 1px;
+            flex: 1;
+            background: linear-gradient(90deg, transparent, rgba(212, 163, 107, 0.35), transparent);
+        }
+
+        .divider-diamond {
+            color: #D4A36B;
+            font-size: 0.65rem;
+        }
+
+        .divider-text {
+            font-size: 0.88rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            color: #D4A36B;
+            text-transform: uppercase;
+        }
+
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 18px;
+        }
+
+        .input-wrapper i.icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #A38C76;
+            font-size: 1.05rem;
+        }
+
+        input {
+            width: 100%;
+            height: 52px;
+            background: rgba(8, 6, 6, 0.65);
+            border: 1px solid rgba(197, 154, 98, 0.28);
+            border-radius: 12px;
+            padding: 0 18px 0 50px;
+            color: #FFF6EE;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            border-color: #D4A36B;
+            background: rgba(14, 10, 8, 0.85);
+            box-shadow: 0 0 20px rgba(212, 163, 107, 0.25);
+        }
+
+        .remember {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+            font-size: 0.86rem;
+            color: #BCA38A;
+            cursor: pointer;
+        }
+
+        button {
+            width: 100%;
+            height: 52px;
+            background: linear-gradient(135deg, #A86B32 0%, #854E1F 50%, #683912 100%);
+            border: 1px solid rgba(212, 163, 107, 0.4);
+            border-radius: 12px;
+            color: #FFFFFF;
+            font-size: 0.98rem;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(104, 57, 18, 0.5);
+            transition: all 0.3s ease;
+            margin-bottom: 22px;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #C28243 0%, #9E5F28 50%, #7E4617 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(194, 130, 67, 0.45);
+        }
+
+        .error {
+            display: none;
+            color: #ef4444;
+            text-align: center;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .footer {
+            border-top: 1px solid rgba(197, 154, 98, 0.18);
+            padding-top: 18px;
+            color: #8C7866;
+            font-size: 0.82rem;
+            letter-spacing: 0.06em;
+        }
+
+        .footer i {
+            color: #D4A36B;
+            margin-right: 6px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="login-card">
+    <div class="hotel-crest">
+        <span class="crest-letter">H</span>
+    </div>
+
+    <h1>HOTELBITE</h1>
+    <div class="subtitle">COMFORT &bull; LUXURY &bull; HOSPITALITY</div>
+
+    <div class="luxury-divider">
+        <span class="divider-diamond">&#9670;</span>
+        <span class="divider-text">LOGIN</span>
+    </div>
+
+    <div id="errorMessage" class="error">
+        Invalid Username or Password
+    </div>
+
+    <form id="loginForm">
+        <div class="input-wrapper">
+            <i class="fa-solid fa-user icon"></i>
+            <input type="text" id="username" placeholder="Username" autocomplete="off" required>
+        </div>
+
+        <div class="input-wrapper">
+            <i class="fa-solid fa-lock icon"></i>
+            <input type="password" id="password" placeholder="Password" autocomplete="new-password" required>
+        </div>
+
+        <div class="remember">
+            <input type="checkbox" id="remember">
+            <label for="remember">Remember me</label>
+        </div>
+
+        <button type="submit">LOGIN</button>
+    </form>
+
+    <div class="footer">
+        <i class="fa-solid fa-shield-halved"></i> Secure Login
+    </div>
+</div>
+
+<script>
+    const users = [
+        { staffId: "ST001", username: "sandy", password: "123456", role: "Admin" },
+        { staffId: "ST002", username: "kumar", password: "123456", role: "Staff" },
+        { staffId: "ST003", username: "priya", password: "123456", role: "Staff" },
+        { staffId: "ST004", username: "arun", password: "123456", role: "Manager" },
+        { staffId: "ST000", username: "admin", password: "1234", role: "Admin" }
+    ];
+
+    window.onload = function () {
+        document.getElementById("loginForm").reset();
+        sessionStorage.clear();
+    };
+
+    document.getElementById("loginForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value;
+        const error = document.getElementById("errorMessage");
+
+        const user = users.find(function(item) {
+            return (
+                (item.username.toLowerCase() === username.toLowerCase() ||
+                 item.staffId.toLowerCase() === username.toLowerCase())
+                && item.password === password
+            );
+        });
+
+        if (user) {
+            const userObj = {
+                username: user.username,
+                staffId: user.staffId,
+                role: user.role
+            };
+
+            sessionStorage.setItem("loggedInUser", JSON.stringify(userObj));
+            localStorage.setItem("hb_current_user", JSON.stringify(userObj));
+            window.location.href = "index.html";
+        } else {
+            error.style.display = "block";
+            document.getElementById("password").value = "";
+        }
+    });
+</script>
+
+</body>
+</html>
