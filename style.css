@@ -1888,6 +1888,8 @@ p {
 .ordering-cart-sidebar {
     position: sticky;
     top: calc(var(--header-height) + 20px);
+    align-self: start;
+    z-index: 90;
     background: rgba(14, 10, 32, 0.7);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
@@ -1995,33 +1997,8 @@ p {
     font-size: 0.9rem;
     font-weight: 700;
     color: var(--accent-neon);
-    min-width: 50px;
+    min-width: 55px;
     text-align: right;
-}
-
-.cart-remove-item-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    font-size: 0.95rem;
-    cursor: pointer;
-    padding: 4px 6px;
-    border-radius: 50%;
-    transition: var(--transition-smooth);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.cart-remove-item-btn:hover {
-    color: var(--color-danger);
-    background: rgba(239, 68, 68, 0.15);
-}
-
-.food-price-tag {
-    font-size: 0.95rem;
-    font-weight: 800;
-    color: var(--accent-light);
 }
 
 .cart-summary-section {

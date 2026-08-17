@@ -661,10 +661,6 @@ function attachEventListeners() {
 
         if (!nameVal) {
             showToast('Please enter the Student or Guest name.', 'warning');
-            const cartSidebar = document.getElementById('live-cart-sidebar');
-            const cartOverlay = document.getElementById('cart-drawer-overlay');
-            if (cartSidebar) cartSidebar.classList.remove('open');
-            if (cartOverlay) cartOverlay.classList.remove('open');
             document.getElementById('student-name').focus();
             return;
         }
@@ -940,7 +936,6 @@ function renderDashboardFoodGrid() {
                 <h4>${item.name}</h4>
                 <p class="desc">${item.desc}</p>
                 <div class="food-card-footer">
-                    <span class="food-price-tag">₹${item.price}</span>
                     ${actionBtnHtml}
                 </div>
             </div>
@@ -1014,7 +1009,6 @@ function quickOrderFromDash(name, price) {
         Storage.saveTables(g_tables);
         showToast(`Added ${name} to Table ${String(table.id).padStart(2, '0')}`, 'success');
         renderDashboard();
-        renderCart();
     }
 }
 
@@ -1198,9 +1192,8 @@ function renderMenu() {
                     <h4>${item.name}</h4>
                     <p class="desc">${item.desc}</p>
                     <div class="food-card-footer">
-                        <span class="food-price-tag">₹${item.price}</span>
-                        ${actionBtnHtml}
-                    </div>
+                    ${actionBtnHtml}
+                </div>
                 </div>
             `;
             grid.appendChild(card);
@@ -1225,26 +1218,6 @@ function getCategoryIcon(cat) {
         default: return 'fa-utensils';
     }
 }
-
-// Remove item completely from active cart
-function removeItemFromCart(name) {
-    const table = g_tables.find(t => t.id === g_activeTableId);
-    if (!table) return;
-
-    if (table.status !== 'available' && table.status !== 'ordering') {
-        showToast(`Table ${String(table.id).padStart(2, '0')} has a confirmed order and cannot be edited.`, 'warning');
-        return;
-    }
-
-    const idx = table.items.findIndex(i => i.name === name);
-    if (idx > -1) {
-        table.items.splice(idx, 1);
-        showToast(`Removed ${name} from cart.`, 'info');
-        renderCart();
-        renderMenu();
-    }
-}
-window.removeItemFromCart = removeItemFromCart;
 
 // =========================================================================
 // 8. LIVE CART MANAGEMENT (TABLE SPECIFIC)
@@ -1294,9 +1267,6 @@ function renderCart() {
                 <button class="quantity-btn" onclick="updateItemQuantity('${item.name}', 1)"><i class="fa-solid fa-plus"></i></button>
             </div>
             <div class="cart-item-total">₹${rowTotal}</div>
-            <button class="cart-remove-item-btn" title="Remove item" onclick="removeItemFromCart('${item.name}')">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
         `;
         listContainer.appendChild(row);
     });
@@ -1324,35 +1294,54 @@ function renderCart() {
 
 // Add item to active order
 function addItemToOrder(name, price) {
-    const table = g_tables.find(t => t.id === g_activeTableId);
-    if (!table) return;
-
-    if (table.status !== 'available' && table.status !== 'ordering') {
-        showToast(`Table ${String(table.id).padStart(2, '0')} has a confirmed order. Release table first to take a new order.`, 'warning');
-        return;
+    let table = g_tables.find(t => t.id === g_activeTableId);
+    
+    // Auto-select table if no table active or active table is locked/confirmed
+    if (!table || (table.status !== 'available' && table.status !== 'ordering')) {
+        selectNextAvailableTable();
+        table = g_tables.find(t => t.id === g_activeTableId);
     }
+
+    if (!table) return;
 
     const item = FOOD_MENU.find(i => i.name === name);
     const activeSession = getActiveSessionByTime();
     
-    // Strict session validation: Cannot add items outside active session
-    if (item && item.timings && !item.timings.includes(activeSession)) {
+    // Validate session availability (or drinks/all items)
+    const isAvailableInSession = item && (item.category === 'drinks' || (item.timings && item.timings.includes(activeSession)) || g_selectedCategory === 'all');
+    if (!isAvailableInSession) {
         showUnavailableToast(name);
         return;
     }
+
+    // Set table status to ordering if currently available
+    if (table.status === 'available') {
+        table.status = 'ordering';
+        if (!table.currentOrderId) {
+            table.currentOrderId = generateNewOrderId();
+            table.startTime = new Date().toISOString();
+        }
+    }
     
-    // Add item with qty 1
-    table.items.push({ name, price, qty: 1 });
+    // Add item or increment existing quantity
+    const existingItem = table.items.find(i => i.name === name);
+    if (existingItem) {
+        existingItem.qty += 1;
+    } else {
+        table.items.push({ name, price, qty: 1 });
+    }
     
-    // Update state
+    // Save to storage and refresh UI
+    Storage.saveTables(g_tables);
     renderCart();
     renderMenu();
-    showToast(`Added ${name} to cart.`, 'success');
+    renderDashboard();
+    showToast(`Added ${name} to Table ${String(table.id).padStart(2, '0')} cart.`, 'success');
 }
 
 // Handle quantity changes
 function updateItemQuantity(name, delta) {
-    const table = g_tables.find(t => t.id === g_activeTableId);
+    let table = g_tables.find(t => t.id === g_activeTableId);
     if (!table) return;
 
     if (table.status !== 'available' && table.status !== 'ordering') {
@@ -1366,7 +1355,8 @@ function updateItemQuantity(name, delta) {
         if (delta > 0) {
             const item = FOOD_MENU.find(i => i.name === name);
             const activeSession = getActiveSessionByTime();
-            if (item && item.timings && !item.timings.includes(activeSession)) {
+            const isAvailableInSession = item && (item.category === 'drinks' || (item.timings && item.timings.includes(activeSession)) || g_selectedCategory === 'all');
+            if (!isAvailableInSession) {
                 showUnavailableToast(name);
                 return;
             }
@@ -1380,8 +1370,10 @@ function updateItemQuantity(name, delta) {
         }
     }
 
+    Storage.saveTables(g_tables);
     renderCart();
     renderMenu();
+    renderDashboard();
 }
 
 // =========================================================================
