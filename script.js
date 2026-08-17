@@ -350,9 +350,10 @@ function showSection(sectionId) {
         }
     });
 
-    // Hide mobile navigation drawer on select
+    // Hide mobile navigation drawer & cart drawer on select
     const appNav = document.querySelector('.app-nav');
     if (appNav) appNav.classList.remove('open');
+    if (typeof closeMobileCart === 'function') closeMobileCart();
 
     // Change background decoration food images depending on page target
     const deco1 = document.querySelector('.deco-1');
@@ -441,6 +442,36 @@ function openConfirmModal(title, message, isDanger, onConfirm) {
 function closeConfirmModal() {
     document.getElementById('modal-overlay').classList.add('hidden');
     g_modalCallback = null;
+}
+
+// Mobile Phone Cart Modal Bottom Sheet Helpers
+function openMobileCart() {
+    const sidebar = document.getElementById('live-cart-sidebar');
+    const overlay = document.getElementById('cart-drawer-overlay');
+    if (sidebar) sidebar.classList.add('open');
+    if (overlay) {
+        overlay.classList.remove('hidden');
+        overlay.classList.add('active');
+    }
+}
+
+function closeMobileCart() {
+    const sidebar = document.getElementById('live-cart-sidebar');
+    const overlay = document.getElementById('cart-drawer-overlay');
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) {
+        overlay.classList.remove('active');
+        overlay.classList.add('hidden');
+    }
+}
+
+function toggleMobileCart() {
+    const sidebar = document.getElementById('live-cart-sidebar');
+    if (sidebar && sidebar.classList.contains('open')) {
+        closeMobileCart();
+    } else {
+        openMobileCart();
+    }
 }
 
 // =========================================================================
@@ -691,16 +722,28 @@ function attachEventListeners() {
         showToast('History filters reset.', 'info');
     });
 
-    // Mobile Cart overlay toggle
-    document.getElementById('mobile-cart-toggle-btn').addEventListener('click', () => {
-        document.getElementById('live-cart-sidebar').classList.toggle('open');
-    });
+    // Mobile Cart overlay sheet toggle & backdrop close
+    const mobileCartBtn = document.getElementById('mobile-cart-toggle-btn');
+    if (mobileCartBtn) mobileCartBtn.addEventListener('click', toggleMobileCart);
 
-    // Modal click buttons
+    const closeCartMobileBtn = document.getElementById('cart-close-mobile-btn');
+    if (closeCartMobileBtn) closeCartMobileBtn.addEventListener('click', closeMobileCart);
+
+    const cartOverlay = document.getElementById('cart-drawer-overlay');
+    if (cartOverlay) cartOverlay.addEventListener('click', closeMobileCart);
+
+    // Modal click buttons & backdrop click
     document.getElementById('modal-cancel-btn').addEventListener('click', closeConfirmModal);
     document.getElementById('modal-confirm-btn').addEventListener('click', () => {
         if (g_modalCallback) g_modalCallback();
     });
+
+    const confirmOverlay = document.getElementById('modal-overlay');
+    if (confirmOverlay) {
+        confirmOverlay.addEventListener('click', (e) => {
+            if (e.target === confirmOverlay) closeConfirmModal();
+        });
+    }
 }
 
 // =========================================================================

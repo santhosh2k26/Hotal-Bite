@@ -344,13 +344,23 @@
                     </div>
 
                     <!-- Right Sidebar Live Cart Drawer -->
+                    <!-- Backdrop overlay for mobile phone cart sheet modal -->
+                    <div class="cart-drawer-overlay hidden" id="cart-drawer-overlay"></div>
+
+                    <!-- Right Sidebar Live Cart Drawer / Mobile Bottom Sheet -->
                     <div class="ordering-cart-sidebar" id="live-cart-sidebar">
+                        <div class="mobile-sheet-handle"></div>
                         <div class="cart-header">
                             <div class="cart-title">
                                 <i class="fa-solid fa-basket-shopping"></i>
                                 <span>Current Order</span>
                             </div>
-                            <div class="cart-meta" id="cart-table-badge">Table 01</div>
+                            <div class="cart-header-actions">
+                                <div class="cart-meta" id="cart-table-badge">Table 01</div>
+                                <button class="cart-close-mobile-btn" id="cart-close-mobile-btn" aria-label="Close Cart">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
                         </div>
 
                         <div class="cart-items-wrapper" id="cart-items-list">
@@ -385,7 +395,7 @@
                 </div>
 
                 <!-- Floating Mobile Cart Toggle button -->
-                <button class="mobile-cart-toggle-btn" id="mobile-cart-toggle-btn">
+                <button class="mobile-cart-toggle-btn" id="mobile-cart-toggle-btn" aria-label="View Order Cart">
                     <i class="fa-solid fa-basket-shopping"></i>
                     <span class="cart-badge-count" id="mobile-cart-badge-count">0</span>
                 </button>
