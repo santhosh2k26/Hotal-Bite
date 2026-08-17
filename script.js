@@ -585,6 +585,30 @@ function attachEventListeners() {
         cartDrawerOverlay.addEventListener('click', () => toggleMobileCartDrawer(false));
     }
 
+    // QR Modal Trigger Handlers
+    const showQrBtn = document.getElementById('btn-show-qr-modal');
+    const qrModalOverlay = document.getElementById('qr-modal-overlay');
+    const qrModalCloseBtn = document.getElementById('qr-modal-close-btn');
+    const qrModalDoneBtn = document.getElementById('qr-modal-done-btn');
+
+    if (showQrBtn && qrModalOverlay) {
+        showQrBtn.addEventListener('click', () => {
+            qrModalOverlay.classList.remove('hidden');
+        });
+    }
+
+    if (qrModalCloseBtn && qrModalOverlay) {
+        qrModalCloseBtn.addEventListener('click', () => {
+            qrModalOverlay.classList.add('hidden');
+        });
+    }
+
+    if (qrModalDoneBtn && qrModalOverlay) {
+        qrModalDoneBtn.addEventListener('click', () => {
+            qrModalOverlay.classList.add('hidden');
+        });
+    }
+
     // 4. ORDERING BACK BUTTONS
     document.getElementById('btn-back-to-dash-from-menu').addEventListener('click', () => {
         saveActiveTableState();

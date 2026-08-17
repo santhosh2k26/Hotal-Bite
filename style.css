@@ -3531,8 +3531,211 @@ p {
     }
 }
 
+}
+
 /* ========================================================================= */
-/* 17. PRINT STYLE SHEET (for billing) */
+/* 17. UPI QR CODE PAYMENT STYLING */
+/* ========================================================================= */
+.invoice-qr-section {
+    background: #ffffff;
+    border: 2px dashed #d1d5db;
+    border-radius: 16px;
+    padding: 16px;
+    margin: 18px 0;
+    text-align: center;
+}
+
+.qr-card-title {
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #111827;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.qr-card-title i {
+    color: var(--accent-purple);
+    font-size: 1.1rem;
+}
+
+.qr-card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.qr-code-img-frame {
+    width: 200px;
+    height: 200px;
+    padding: 8px;
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.qr-code-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.qr-code-details {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.qr-payee-name {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #111827;
+    letter-spacing: 0.04em;
+    margin: 0;
+}
+
+.qr-upi-id {
+    font-size: 0.82rem;
+    color: #4b5563;
+    margin: 0;
+}
+
+.qr-upi-id strong {
+    color: #2563eb;
+    font-weight: 700;
+}
+
+.upi-apps-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.upi-app-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.upi-app-chip.gpay { background: #e0f2fe; color: #0284c7; }
+.upi-app-chip.phonepe { background: #f3e8ff; color: #7e22ce; }
+.upi-app-chip.paytm { background: #e0f2fe; color: #0369a1; }
+.upi-app-chip.navi { background: #dcfce7; color: #15803d; }
+
+/* QR Modal Styles */
+.qr-modal-card {
+    max-width: 400px;
+    padding: 32px 24px;
+    text-align: center;
+    position: relative;
+}
+
+.qr-modal-header {
+    margin-bottom: 20px;
+}
+
+.qr-modal-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--accent-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    margin: 0 auto 12px auto;
+}
+
+.qr-modal-header h3 {
+    font-size: 1.4rem;
+    margin-bottom: 4px;
+}
+
+.qr-modal-header p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.qr-modal-img-frame {
+    width: 230px;
+    height: 230px;
+    margin: 0 auto 20px auto;
+    padding: 10px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.qr-modal-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.qr-modal-meta {
+    margin-bottom: 24px;
+}
+
+.qr-modal-payee {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 4px;
+}
+
+.qr-modal-upi {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.qr-modal-upi span {
+    color: var(--accent-light);
+    font-weight: 700;
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-muted);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: var(--transition-bounce);
+}
+
+.modal-close-btn:hover {
+    background: rgba(239, 68, 68, 0.25);
+    color: #ef4444;
+}
+
+/* ========================================================================= */
+/* 18. PRINT STYLE SHEET (for billing) */
 /* ========================================================================= */
 @media print {
 
