@@ -661,6 +661,10 @@ function attachEventListeners() {
 
         if (!nameVal) {
             showToast('Please enter the Student or Guest name.', 'warning');
+            const cartSidebar = document.getElementById('live-cart-sidebar');
+            const cartOverlay = document.getElementById('cart-drawer-overlay');
+            if (cartSidebar) cartSidebar.classList.remove('open');
+            if (cartOverlay) cartOverlay.classList.remove('open');
             document.getElementById('student-name').focus();
             return;
         }
@@ -936,6 +940,7 @@ function renderDashboardFoodGrid() {
                 <h4>${item.name}</h4>
                 <p class="desc">${item.desc}</p>
                 <div class="food-card-footer">
+                    <span class="food-price-tag">₹${item.price}</span>
                     ${actionBtnHtml}
                 </div>
             </div>
@@ -1009,6 +1014,7 @@ function quickOrderFromDash(name, price) {
         Storage.saveTables(g_tables);
         showToast(`Added ${name} to Table ${String(table.id).padStart(2, '0')}`, 'success');
         renderDashboard();
+        renderCart();
     }
 }
 
@@ -1192,8 +1198,9 @@ function renderMenu() {
                     <h4>${item.name}</h4>
                     <p class="desc">${item.desc}</p>
                     <div class="food-card-footer">
-                    ${actionBtnHtml}
-                </div>
+                        <span class="food-price-tag">₹${item.price}</span>
+                        ${actionBtnHtml}
+                    </div>
                 </div>
             `;
             grid.appendChild(card);
@@ -1218,6 +1225,26 @@ function getCategoryIcon(cat) {
         default: return 'fa-utensils';
     }
 }
+
+// Remove item completely from active cart
+function removeItemFromCart(name) {
+    const table = g_tables.find(t => t.id === g_activeTableId);
+    if (!table) return;
+
+    if (table.status !== 'available' && table.status !== 'ordering') {
+        showToast(`Table ${String(table.id).padStart(2, '0')} has a confirmed order and cannot be edited.`, 'warning');
+        return;
+    }
+
+    const idx = table.items.findIndex(i => i.name === name);
+    if (idx > -1) {
+        table.items.splice(idx, 1);
+        showToast(`Removed ${name} from cart.`, 'info');
+        renderCart();
+        renderMenu();
+    }
+}
+window.removeItemFromCart = removeItemFromCart;
 
 // =========================================================================
 // 8. LIVE CART MANAGEMENT (TABLE SPECIFIC)
@@ -1267,6 +1294,9 @@ function renderCart() {
                 <button class="quantity-btn" onclick="updateItemQuantity('${item.name}', 1)"><i class="fa-solid fa-plus"></i></button>
             </div>
             <div class="cart-item-total">₹${rowTotal}</div>
+            <button class="cart-remove-item-btn" title="Remove item" onclick="removeItemFromCart('${item.name}')">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         `;
         listContainer.appendChild(row);
     });

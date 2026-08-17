@@ -1995,8 +1995,33 @@ p {
     font-size: 0.9rem;
     font-weight: 700;
     color: var(--accent-neon);
-    min-width: 55px;
+    min-width: 50px;
     text-align: right;
+}
+
+.cart-remove-item-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 50%;
+    transition: var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cart-remove-item-btn:hover {
+    color: var(--color-danger);
+    background: rgba(239, 68, 68, 0.15);
+}
+
+.food-price-tag {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--accent-light);
 }
 
 .cart-summary-section {
