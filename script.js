@@ -848,6 +848,14 @@ function renderDashboardFoodGrid() {
     });
 }
 
+// Scroll Dashboard Food Showcase Row horizontally
+function scrollDashFoodRow(amount) {
+    const grid = document.getElementById('dashboard-food-grid');
+    if (grid) {
+        grid.scrollBy({ left: amount, behavior: 'smooth' });
+    }
+}
+
 // Automatically select the next available table sequentially (e.g. Table 1 -> Table 2 -> Table 3)
 function selectNextAvailableTable() {
     const currentId = g_activeTableId || 0;

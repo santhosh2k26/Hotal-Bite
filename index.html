@@ -143,26 +143,32 @@
             <!-- ========================================================================= -->
             <section id="view-dashboard" class="view-section active">
                 
-                <!-- Food Menu Items Showcase Directly Under Header -->
+                <!-- Horizontal Food Row Showcase Directly Under Header -->
                 <div class="dashboard-food-showcase">
                     <div class="section-header">
                         <div>
-                            <h2><i class="fa-solid fa-utensils"></i> Food Menu &amp; Dishes</h2>
-                            <p class="section-subtitle">Browse delicious food items with images right after logging in.</p>
+                            <h2><i class="fa-solid fa-fire"></i> Quick Food Showcase</h2>
+                            <p class="section-subtitle">Browse delicious food dishes sliding horizontally in a single row.</p>
                         </div>
-                        <div class="dash-category-tabs" id="dash-category-tabs">
-                            <button class="dash-tab active" data-dash-cat="active">⏰ Active Session</button>
-                            <button class="dash-tab" data-dash-cat="breakfast">Breakfast</button>
-                            <button class="dash-tab" data-dash-cat="lunch">Lunch</button>
-                            <button class="dash-tab" data-dash-cat="snacks">Snacks</button>
-                            <button class="dash-tab" data-dash-cat="dinner">Dinner</button>
-                            <button class="dash-tab" data-dash-cat="drinks">Drinks</button>
-                            <button class="dash-tab" data-dash-cat="all">All Items</button>
+                        <div class="dash-header-controls">
+                            <div class="dash-category-tabs" id="dash-category-tabs">
+                                <button class="dash-tab active" data-dash-cat="active">⏰ Active Session</button>
+                                <button class="dash-tab" data-dash-cat="breakfast">Breakfast</button>
+                                <button class="dash-tab" data-dash-cat="lunch">Lunch</button>
+                                <button class="dash-tab" data-dash-cat="snacks">Snacks</button>
+                                <button class="dash-tab" data-dash-cat="dinner">Dinner</button>
+                                <button class="dash-tab" data-dash-cat="drinks">Drinks</button>
+                                <button class="dash-tab" data-dash-cat="all">All Items</button>
+                            </div>
+                            <div class="row-scroll-actions">
+                                <button class="row-scroll-btn" onclick="scrollDashFoodRow(-320)" title="Scroll Left"><i class="fa-solid fa-chevron-left"></i></button>
+                                <button class="row-scroll-btn" onclick="scrollDashFoodRow(320)" title="Scroll Right"><i class="fa-solid fa-chevron-right"></i></button>
+                            </div>
                         </div>
                     </div>
                     
                     <div class="food-grid dashboard-food-grid" id="dashboard-food-grid">
-                        <!-- Food cards with images rendered dynamically by JS -->
+                        <!-- Horizontal food cards rendered dynamically by JS -->
                     </div>
                 </div>
 
