@@ -455,50 +455,39 @@ function closeConfirmModal() {
 // 5. ATTACH GENERAL EVENT LISTENERS
 // =========================================================================
 function attachEventListeners() {
-    // 1. LOGIN HANDLER
+    // 1. UNIVERSAL LOGIN HANDLER (ANY USERNAME & PASSWORD ACCEPTED)
     document.getElementById('login-form').addEventListener('submit', (e) => {
         e.preventDefault();
         const usernameVal = document.getElementById('username').value.trim();
-        const passwordVal = document.getElementById('password').value;
         const errorEl = document.getElementById('errorMessage');
 
+        if (errorEl) errorEl.style.display = 'none';
+
+        const enteredUser = usernameVal || 'Staff User';
+        
+        // Find if matching predefined user profile or auto-generate staff profile
         const foundUser = USERS.find(item => 
-            (item.username.toLowerCase() === usernameVal.toLowerCase() || 
-             item.staffId.toLowerCase() === usernameVal.toLowerCase()) &&
-            item.password === passwordVal
+            item.username.toLowerCase() === enteredUser.toLowerCase() || 
+            item.staffId.toLowerCase() === enteredUser.toLowerCase()
         );
 
-        if (foundUser) {
-            if (errorEl) errorEl.style.display = 'none';
-            
-            const userObj = {
-                username: foundUser.username,
-                staffId: foundUser.staffId,
-                role: foundUser.role
-            };
+        const userObj = {
+            username: foundUser ? foundUser.username : (enteredUser.charAt(0).toUpperCase() + enteredUser.slice(1)),
+            staffId: foundUser ? foundUser.staffId : 'EMP-' + Math.floor(1000 + Math.random() * 9000),
+            role: foundUser ? foundUser.role : 'Canteen Staff'
+        };
 
-            Storage.saveCurrentUser(userObj);
-            
-            document.body.classList.remove('login-active');
-            document.getElementById('app-shell').classList.remove('hidden');
-            updateUserUI(userObj);
-            
-            showToast(`Welcome back, ${foundUser.username} (${foundUser.role})!`, 'success');
-            showSection('dashboard');
-            
-            const loginForm = document.getElementById('login-form');
-            if (loginForm) loginForm.reset();
-        } else {
-            if (errorEl) errorEl.style.display = 'block';
-            document.getElementById('password').value = '';
-            
-            const loginCard = document.querySelector('.login-card');
-            if (loginCard) {
-                loginCard.classList.add('shake-form');
-                setTimeout(() => loginCard.classList.remove('shake-form'), 500);
-            }
-            showToast('Invalid Username or Password', 'error');
-        }
+        Storage.saveCurrentUser(userObj);
+        
+        document.body.classList.remove('login-active');
+        document.getElementById('app-shell').classList.remove('hidden');
+        updateUserUI(userObj);
+        
+        showToast(`Welcome, ${userObj.username}! Logged in successfully.`, 'success');
+        showSection('dashboard');
+        
+        const loginForm = document.getElementById('login-form');
+        if (loginForm) loginForm.reset();
     });
 
     // Toggle password view
@@ -788,7 +777,17 @@ function attachEventListeners() {
         }
     });
 
-    // 10. HISTORY FILTERS EVENTS
+    // 10. HISTORY FILTERS & BACK EVENTS
+    const btnHistoryBack = document.getElementById('btn-history-back-to-dash');
+    if (btnHistoryBack) {
+        btnHistoryBack.addEventListener('click', () => showSection('dashboard'));
+    }
+
+    const btnSettingsBack = document.getElementById('btn-settings-back-to-dash');
+    if (btnSettingsBack) {
+        btnSettingsBack.addEventListener('click', () => showSection('dashboard'));
+    }
+
     document.getElementById('history-search').addEventListener('input', renderHistory);
     document.getElementById('history-filter-table').addEventListener('change', renderHistory);
     document.getElementById('history-filter-status').addEventListener('change', renderHistory);
