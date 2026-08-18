@@ -87,8 +87,6 @@ const Storage = {
         try {
             const sessionUser = sessionStorage.getItem("hb_active_user");
             if (sessionUser) return JSON.parse(sessionUser);
-            const localUser = localStorage.getItem("hb_active_user");
-            if (localUser) return JSON.parse(localUser);
             return null;
         } catch (e) {
             console.error("Failed to load current user from storage:", e);
@@ -99,10 +97,8 @@ const Storage = {
         try {
             if (userObj) {
                 sessionStorage.setItem("hb_active_user", JSON.stringify(userObj));
-                localStorage.setItem("hb_active_user", JSON.stringify(userObj));
             } else {
                 sessionStorage.removeItem("hb_active_user");
-                localStorage.removeItem("hb_active_user");
             }
         } catch (e) {
             console.error("Failed to save current user to storage:", e);
@@ -223,30 +219,15 @@ let g_modalCallback = null;
 // 3. INITIALIZATION & ROUTING
 // =========================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if an active logged in user session exists
-    const activeUser = Storage.getCurrentUser();
+    // Always start at Login screen when coming back / loading page
+    Storage.saveCurrentUser(null);
+    document.body.classList.add('login-active');
+    document.getElementById('app-shell').classList.add('hidden');
 
-    if (activeUser) {
-        // Load THIS SPECIFIC USER'S persistent saved data from isolated storage
-        g_tables = Storage.getTables();
-        g_orders = Storage.getOrders();
-        g_nextOrderIdCounter = Storage.getNextOrderId();
-
-        document.body.classList.remove('login-active');
-        document.getElementById('app-shell').classList.remove('hidden');
-        updateUserUI(activeUser);
-        renderDashboard();
-        initMenu();
-        showSection('dashboard');
-    } else {
-        document.body.classList.add('login-active');
-        document.getElementById('app-shell').classList.add('hidden');
-
-        const loginForm = document.getElementById('login-form');
-        if (loginForm) loginForm.reset();
-        const errorEl = document.getElementById('errorMessage');
-        if (errorEl) errorEl.style.display = 'none';
-    }
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) loginForm.reset();
+    const errorEl = document.getElementById('errorMessage');
+    if (errorEl) errorEl.style.display = 'none';
 
     // Run active clock
     startClock();
@@ -500,8 +481,10 @@ function attachEventListeners() {
 
         Storage.saveCurrentUser(userObj);
 
-        // Load THIS SPECIFIC USER'S persistent saved data from isolated storage
-        g_tables = Storage.getTables();
+        // Always reset all 10 tables to clean "Available" status on login
+        g_tables = JSON.parse(JSON.stringify(DEFAULT_TABLES));
+        Storage.saveTables(g_tables);
+
         g_orders = Storage.getOrders();
         g_nextOrderIdCounter = Storage.getNextOrderId();
 
