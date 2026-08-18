@@ -478,13 +478,37 @@ function attachEventListeners() {
         };
 
         Storage.saveCurrentUser(userObj);
+
+        // Reset active session cart and table selections for a completely fresh workspace
+        g_cart = [];
+        g_activeTableId = null;
+        g_tableFilter = 'all';
+
+        // Clear unfinished draft ordering states from tables
+        g_tables.forEach(table => {
+            if (table.status === 'ordering') {
+                table.status = 'available';
+                table.customerName = '';
+                table.numPeople = 1;
+                table.items = [];
+                table.itemsCount = 0;
+                table.totalAmount = 0;
+                table.currentOrderId = null;
+            }
+        });
+        Storage.saveTables(g_tables);
         
         document.body.classList.remove('login-active');
         document.getElementById('app-shell').classList.remove('hidden');
-        updateUserUI(userObj);
         
-        showToast(`Welcome, ${userObj.username}! Logged in successfully.`, 'success');
+        updateUserUI(userObj);
+        renderCart();
+        renderDashboard();
+        
         showSection('dashboard');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        showToast(`Welcome, ${userObj.username}! Opening fresh workspace.`, 'success');
         
         const loginForm = document.getElementById('login-form');
         if (loginForm) loginForm.reset();
