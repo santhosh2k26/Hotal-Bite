@@ -268,13 +268,17 @@
     window.onload = function () {
         const form = document.getElementById("loginForm");
         if (form) form.reset();
+        localStorage.clear();
         sessionStorage.clear();
     };
 
     document.getElementById("loginForm").addEventListener("submit", function(event) {
         event.preventDefault();
         const username = document.getElementById("username").value.trim();
-        const password = document.getElementById("password").value;
+
+        // 100% WIPE ALL PAST DATA - BRAND NEW WEBSITE SESSION ON EVERY LOGIN
+        localStorage.clear();
+        sessionStorage.clear();
 
         const enteredUser = username || 'Staff User';
         const foundUser = users.find(function(item) {
@@ -290,7 +294,7 @@
 
         sessionStorage.setItem("hb_active_user", JSON.stringify(userObj));
 
-        // Always reset all 10 tables to fresh clean "Available" status on login
+        // Brand new pristine default tables (10 Available)
         const defaultTables = Array.from({ length: 10 }, (_, i) => ({
             id: i + 1,
             status: 'available',
@@ -303,10 +307,9 @@
             startTime: null
         }));
 
-        const uname = userObj.username.toLowerCase().replace(/[^a-z0-9]/g, '');
-        localStorage.setItem(`hb_user_${uname}_tables`, JSON.stringify(defaultTables));
-        localStorage.setItem(`hb_user_${uname}_orders`, JSON.stringify([]));
-        localStorage.setItem(`hb_user_${uname}_next_order_id`, '1');
+        localStorage.setItem('hb_tables', JSON.stringify(defaultTables));
+        localStorage.setItem('hb_orders', JSON.stringify([]));
+        localStorage.setItem('hb_next_order_id', '1');
 
         window.location.href = "index.html";
     });

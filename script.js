@@ -457,13 +457,17 @@ function closeConfirmModal() {
 // 5. ATTACH GENERAL EVENT LISTENERS
 // =========================================================================
 function attachEventListeners() {
-    // 1. UNIVERSAL LOGIN HANDLER (ANY USERNAME & PASSWORD ACCEPTED)
+    // 1. UNIVERSAL LOGIN HANDLER (100% BRAND NEW CLEAN WEBSITE ON EVERY LOGIN)
     document.getElementById('login-form').addEventListener('submit', (e) => {
         e.preventDefault();
         const usernameVal = document.getElementById('username').value.trim();
         const errorEl = document.getElementById('errorMessage');
 
         if (errorEl) errorEl.style.display = 'none';
+
+        // 100% WIPE ALL PAST DATA FOR BRAND NEW WEBSITE SESSION
+        localStorage.clear();
+        sessionStorage.clear();
 
         const enteredUser = usernameVal || 'Staff User';
         
@@ -481,20 +485,17 @@ function attachEventListeners() {
 
         Storage.saveCurrentUser(userObj);
 
-        // Always reset all 10 tables to clean "Available" status on login
+        // 100% BRAND NEW PRISTINE DEFAULTS (10 Available Tables, 0 Orders, ₹0 Revenue)
         g_tables = JSON.parse(JSON.stringify(DEFAULT_TABLES));
-        Storage.saveTables(g_tables);
-
-        g_orders = Storage.getOrders();
-        g_nextOrderIdCounter = Storage.getNextOrderId();
-
-        // Clear active temporary session memory
+        g_orders = [];
+        g_nextOrderIdCounter = 1;
         g_cart = [];
         g_activeTableId = null;
         g_tableFilter = 'all';
 
-        // Select first available table for new active session
-        selectNextAvailableTable();
+        Storage.saveTables(g_tables);
+        Storage.saveOrders(g_orders);
+        Storage.saveNextOrderId(1);
 
         document.body.classList.remove('login-active');
         document.getElementById('app-shell').classList.remove('hidden');
@@ -503,11 +504,12 @@ function attachEventListeners() {
         initMenu();
         renderCart();
         renderDashboard();
+        renderHistory();
         
         showSection('dashboard');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         
-        showToast(`Welcome back, ${userObj.username}! Your saved session data has been loaded.`, 'success');
+        showToast(`Welcome, ${userObj.username}! Brand new clean website session opened.`, 'success');
         
         const loginForm = document.getElementById('login-form');
         if (loginForm) loginForm.reset();
