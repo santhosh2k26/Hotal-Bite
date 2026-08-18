@@ -267,37 +267,31 @@
 
     window.onload = function () {
         document.getElementById("loginForm").reset();
-        sessionStorage.clear();
     };
 
     document.getElementById("loginForm").addEventListener("submit", function(event) {
         event.preventDefault();
-        const username = document.getElementById("username").value.trim();
-        const password = document.getElementById("password").value;
+        const usernameInput = document.getElementById("username").value.trim();
+        const enteredUser = usernameInput || "Staff User";
         const error = document.getElementById("errorMessage");
+        if (error) error.style.display = "none";
 
         const user = users.find(function(item) {
             return (
-                (item.username.toLowerCase() === username.toLowerCase() ||
-                 item.staffId.toLowerCase() === username.toLowerCase())
-                && item.password === password
+                item.username.toLowerCase() === enteredUser.toLowerCase() ||
+                item.staffId.toLowerCase() === enteredUser.toLowerCase()
             );
         });
 
-        if (user) {
-            const userObj = {
-                username: user.username,
-                staffId: user.staffId,
-                role: user.role
-            };
+        const userObj = {
+            username: user ? user.username : (enteredUser.charAt(0).toUpperCase() + enteredUser.slice(1)),
+            staffId: user ? user.staffId : "EMP-" + Math.floor(1000 + Math.random() * 9000),
+            role: user ? user.role : "Canteen Staff"
+        };
 
-            sessionStorage.setItem("loggedInUser", JSON.stringify(userObj));
-            localStorage.setItem("hb_current_user", JSON.stringify(userObj));
-            window.location.href = "index.html";
-        } else {
-            error.style.display = "block";
-            document.getElementById("password").value = "";
-        }
+        sessionStorage.setItem("hb_active_user", JSON.stringify(userObj));
+        localStorage.setItem("hb_active_user", JSON.stringify(userObj));
+        window.location.href = "index.html";
     });
 </script>
 
