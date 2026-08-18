@@ -1583,13 +1583,12 @@ function confirmOrderSubmission() {
     // Update table status to confirmed / sent to kitchen (LOCKED)
     table.status = 'placed'; // ORDER SENT TO KITCHEN / CONFIRMED
     table.itemsCount = kitchenItems.reduce((sum, item) => sum + item.qty, 0);
-    // Retain table.items, table.currentOrderId, table.customerName, table.totalAmount for existing order viewing!
     Storage.saveTables(g_tables);
 
     showToast(`Order ${newOrder.orderId} confirmed and sent to Kitchen! Table ${String(table.id).padStart(2, '0')} is now locked.`, 'success');
     
-    // Automatically advance active table pointer to Next Available Table (e.g. Table 1 -> Table 2 -> Table 3)
-    selectNextAvailableTable();
+    // Clear active table pointer so other tables remain completely unaffected
+    g_activeTableId = null;
 
     renderDashboard();
     showSection('kitchen');
@@ -1832,14 +1831,14 @@ function markOrderPaid(orderId) {
     order.paymentStatus = 'paid';
     
     // Automatically transition order status to delivered if paid
-    if (order.status === 'ready' || order.status === 'placed' || order.status === 'preparing') {
+    if (order.status === 'ready') {
         order.status = 'delivered';
     }
 
     Storage.saveOrders(g_orders);
     showToast(`Order ${orderId} marked as Paid!`, 'success');
 
-    // Update ONLY the specific table tied to this order
+    // Update active table reference status
     const table = g_tables.find(t => t.id === order.tableId);
     if (table && table.currentOrderId === orderId) {
         table.status = 'delivered';
@@ -1849,10 +1848,9 @@ function markOrderPaid(orderId) {
     generateInvoice(orderId); // Refresh view
 }
 
-// Explicitly release a single table and make it AVAILABLE again (100% isolated to target table)
+// Explicitly release a table and make it AVAILABLE again
 function releaseTable(tableId) {
-    const targetId = parseInt(tableId, 10);
-    const table = g_tables.find(t => t.id === targetId);
+    const table = g_tables.find(t => t.id === tableId);
     if (!table) return;
 
     const orderId = table.currentOrderId;
@@ -1867,7 +1865,7 @@ function releaseTable(tableId) {
         }
     }
 
-    // Reset ONLY the target table back to default Available state
+    // Reset table variables to initial Available state
     table.status = 'available';
     table.currentOrderId = null;
     table.customerName = null;
@@ -1876,20 +1874,19 @@ function releaseTable(tableId) {
     table.itemsCount = 0;
     table.totalAmount = 0;
     table.startTime = null;
-
-    if (g_activeTableId === targetId) {
+    
+    if (g_activeTableId === tableId) {
         g_activeTableId = null;
     }
     
     Storage.saveTables(g_tables);
 
-    showToast(`Table ${String(targetId).padStart(2, '0')} order completed! Status is now AVAILABLE.`, 'success');
+    showToast(`Table ${String(tableId).padStart(2, '0')} released! Status is now AVAILABLE.`, 'success');
     renderDashboard();
-    renderCart();
     showSection('dashboard');
 }
 
-// Mark order delivered and release ONLY that specific Table
+// Mark order delivered and release the Table
 function markOrderDelivered(orderId) {
     const order = g_orders.find(o => o.orderId === orderId);
     if (order) {
