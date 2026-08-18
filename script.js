@@ -479,24 +479,21 @@ function attachEventListeners() {
 
         Storage.saveCurrentUser(userObj);
 
-        // Reset active session cart and table selections for a completely fresh workspace
+        // 100% BRAND NEW WEBSITE RESET ON EVERY LOGIN:
+        // Reset all 10 tables to default clean "Available" status
+        g_tables = JSON.parse(JSON.stringify(DEFAULT_TABLES));
+        Storage.saveTables(g_tables);
+
+        // Clear active cart & active table selections
         g_cart = [];
         g_activeTableId = null;
         g_tableFilter = 'all';
 
-        // Clear unfinished draft ordering states from tables
-        g_tables.forEach(table => {
-            if (table.status === 'ordering') {
-                table.status = 'available';
-                table.customerName = '';
-                table.numPeople = 1;
-                table.items = [];
-                table.itemsCount = 0;
-                table.totalAmount = 0;
-                table.currentOrderId = null;
-            }
-        });
-        Storage.saveTables(g_tables);
+        // Clear previous orders history & reset order counter back to #ORD-001
+        g_orders = [];
+        g_nextOrderIdCounter = 1;
+        Storage.saveOrders(g_orders);
+        Storage.saveNextOrderId(1);
         
         document.body.classList.remove('login-active');
         document.getElementById('app-shell').classList.remove('hidden');
@@ -508,7 +505,7 @@ function attachEventListeners() {
         showSection('dashboard');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         
-        showToast(`Welcome, ${userObj.username}! Opening fresh workspace.`, 'success');
+        showToast(`Welcome, ${userObj.username}! Opening brand new clean website session.`, 'success');
         
         const loginForm = document.getElementById('login-form');
         if (loginForm) loginForm.reset();
@@ -527,8 +524,8 @@ function attachEventListeners() {
         }
     });
 
-    // 2. LOGOUT HANDLER
-    document.getElementById('logout-btn').addEventListener('click', () => {
+    // 2. LOGOUT HANDLERS (Navbar & Settings Page Logout)
+    const performLogout = () => {
         openConfirmModal('Logout Session', 'Are you sure you want to log out of the HostelBite system?', false, () => {
             Storage.saveCurrentUser(null);
             document.body.classList.add('login-active');
@@ -540,7 +537,13 @@ function attachEventListeners() {
             closeConfirmModal();
             showToast('Logged out successfully.', 'info');
         });
-    });
+    };
+
+    const headerLogoutBtn = document.getElementById('logout-btn');
+    if (headerLogoutBtn) headerLogoutBtn.addEventListener('click', performLogout);
+
+    const settingsLogoutBtn = document.getElementById('settings-logout-btn');
+    if (settingsLogoutBtn) settingsLogoutBtn.addEventListener('click', performLogout);
 
     // 3. NAVIGATION VIEW SWAPPING
     document.querySelectorAll('.app-nav .nav-link').forEach(btn => {
