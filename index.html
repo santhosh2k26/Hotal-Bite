@@ -186,9 +186,9 @@
                     </div>
                 </div>
 
-                <!-- 6 Luxury Stat Cards Grid (From reference image) -->
+                <!-- 6 Luxury Stat Cards Grid (Clickable Filters) -->
                 <div class="stats-container stats-grid">
-                    <div class="stat-card luxury-stat-card">
+                    <div class="stat-card luxury-stat-card active-filter" data-stat-filter="all" title="Click to filter: All Tables">
                         <div class="stat-visual-icon">
                             <img src="images/stat_total_tables.jpg" alt="Total Tables">
                         </div>
@@ -197,7 +197,7 @@
                             <p class="stat-value" id="stat-total-tables">10</p>
                         </div>
                     </div>
-                    <div class="stat-card luxury-stat-card">
+                    <div class="stat-card luxury-stat-card" data-stat-filter="available" title="Click to filter: Available Tables">
                         <div class="stat-visual-icon icon-green">
                             <img src="images/stat_available.jpg" alt="Available">
                         </div>
@@ -206,7 +206,7 @@
                             <p class="stat-value" id="stat-available-tables">10</p>
                         </div>
                     </div>
-                    <div class="stat-card luxury-stat-card">
+                    <div class="stat-card luxury-stat-card" data-stat-filter="active" title="Click to filter: Active Orders">
                         <div class="stat-visual-icon icon-gold">
                             <img src="images/stat_active_orders.svg" alt="Active Orders">
                         </div>
@@ -215,7 +215,7 @@
                             <p class="stat-value" id="stat-active-orders">0</p>
                         </div>
                     </div>
-                    <div class="stat-card luxury-stat-card">
+                    <div class="stat-card luxury-stat-card" data-stat-filter="preparing" title="Click to filter: Preparing Orders">
                         <div class="stat-visual-icon icon-amber">
                             <img src="images/stat_preparing.svg" alt="Preparing">
                         </div>
@@ -224,7 +224,7 @@
                             <p class="stat-value" id="stat-preparing-orders">0</p>
                         </div>
                     </div>
-                    <div class="stat-card luxury-stat-card">
+                    <div class="stat-card luxury-stat-card" data-stat-filter="delivered" title="Click to filter: Delivered Orders">
                         <div class="stat-visual-icon icon-bronze">
                             <img src="images/stat_delivered.svg" alt="Delivered">
                         </div>
@@ -233,7 +233,7 @@
                             <p class="stat-value" id="stat-delivered-orders">0</p>
                         </div>
                     </div>
-                    <div class="stat-card luxury-stat-card">
+                    <div class="stat-card luxury-stat-card" data-stat-filter="revenue" title="Click to view Revenue details">
                         <div class="stat-visual-icon icon-coins">
                             <img src="images/stat_revenue.svg" alt="Today's Revenue">
                         </div>
@@ -242,6 +242,17 @@
                             <p class="stat-value" id="stat-revenue">₹0</p>
                         </div>
                     </div>
+                </div>
+
+                <!-- Active Table Filter Header -->
+                <div class="tables-section-header">
+                    <div class="tables-header-info">
+                        <h2><i class="fa-solid fa-table-cells"></i> <span id="tables-filter-title">All Tables</span></h2>
+                        <p class="section-subtitle" id="tables-filter-subtitle">Select a table below to start a new order or manage active sessions.</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm hidden" id="btn-reset-table-filter">
+                        <i class="fa-solid fa-rotate-left"></i> Show All Tables
+                    </button>
                 </div>
 
                 <!-- Tables Grid -->

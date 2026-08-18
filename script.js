@@ -189,6 +189,7 @@ let g_tables = [];
 let g_orders = [];
 let g_nextOrderIdCounter = 1;
 let g_activeTableId = null; 
+let g_tableFilter = 'all';
 let g_searchQuery = '';
 let g_selectedCategory = 'active';
 let g_dashCategory = 'active';
@@ -585,6 +586,23 @@ function attachEventListeners() {
         cartDrawerOverlay.addEventListener('click', () => toggleMobileCartDrawer(false));
     }
 
+    // Stat Card Filter Click Events
+    document.querySelectorAll('.luxury-stat-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const filterType = card.getAttribute('data-stat-filter') || 'all';
+            g_tableFilter = filterType;
+            renderDashboard();
+        });
+    });
+
+    const resetTableFilterBtn = document.getElementById('btn-reset-table-filter');
+    if (resetTableFilterBtn) {
+        resetTableFilterBtn.addEventListener('click', () => {
+            g_tableFilter = 'all';
+            renderDashboard();
+        });
+    }
+
     // 4. ORDERING BACK BUTTONS
     document.getElementById('btn-back-to-dash-from-menu').addEventListener('click', () => {
         saveActiveTableState();
@@ -799,6 +817,15 @@ function attachEventListeners() {
 // =========================================================================
 // 6. DASHBOARD & STATS GENERATOR
 // =========================================================================
+// =========================================================================
+// 6. DASHBOARD & STATS GENERATOR WITH STAT FILTERING
+// =========================================================================
+function resetTableFilter() {
+    g_tableFilter = 'all';
+    renderDashboard();
+}
+window.resetTableFilter = resetTableFilter;
+
 function renderDashboard() {
     const grid = document.getElementById('tables-grid-container');
     grid.innerHTML = '';
@@ -824,57 +851,6 @@ function renderDashboard() {
         if (table.status === 'preparing' || table.status === 'placed' || table.status === 'confirmed') preparingCount++;
         if (table.status === 'ready') preparingCount++; // Ready items counts in kitchen flow prep
         if (table.status === 'delivered') deliveredCount++;
-
-        // Render card
-        const card = document.createElement('div');
-        card.className = `table-card ${table.status}`;
-        card.setAttribute('data-id', table.id);
-
-        let statusText = 'Available';
-        if (table.status === 'ordering') statusText = 'Ordering';
-        else if (table.status === 'placed' || table.status === 'confirmed') statusText = 'Order Confirmed';
-        else if (table.status === 'preparing') statusText = 'Preparing';
-        else if (table.status === 'ready') statusText = 'Order Ready';
-        else if (table.status === 'delivered') statusText = 'Delivered';
-
-        let orderIdDisplay = table.currentOrderId || '—';
-        let customerDisplay = table.customerName || '—';
-        let timeDisplay = table.startTime ? formatTimeStr(new Date(table.startTime)) : '—';
-        let itemsVal = table.itemsCount > 0 ? `${table.itemsCount} Items` : '—';
-        let totalVal = table.totalAmount > 0 ? `₹${table.totalAmount}` : '—';
-
-        card.innerHTML = `
-            <h3>Table ${String(table.id).padStart(2, '0')}</h3>
-            <span class="table-status-pill status-${table.status}">${statusText}</span>
-            <div class="table-card-img-wrapper">
-                <img src="images/restaurant_table.png" alt="Table Scene">
-            </div>
-            <div class="table-details-list">
-                <div class="detail-row">
-                    <span>Order ID:</span>
-                    <span>${orderIdDisplay}</span>
-                </div>
-                <div class="detail-row">
-                    <span>Customer:</span>
-                    <span>${customerDisplay}</span>
-                </div>
-                <div class="detail-row">
-                    <span>Time:</span>
-                    <span>${timeDisplay}</span>
-                </div>
-                <div class="detail-row">
-                    <span>Items:</span>
-                    <span>${itemsVal}</span>
-                </div>
-                <div class="detail-row total-amount">
-                    <span>Total:</span>
-                    <span>${totalVal}</span>
-                </div>
-            </div>
-        `;
-
-        card.addEventListener('click', () => selectTable(table.id));
-        grid.appendChild(card);
     });
 
     // Update Stats counters in UI
@@ -884,6 +860,123 @@ function renderDashboard() {
     document.getElementById('stat-preparing-orders').textContent = preparingCount;
     document.getElementById('stat-delivered-orders').textContent = deliveredCount;
     document.getElementById('stat-revenue').textContent = `₹${todayRevenue}`;
+
+    // Highlight selected stat card filter
+    document.querySelectorAll('.luxury-stat-card').forEach(card => {
+        const filterType = card.getAttribute('data-stat-filter');
+        if (filterType === g_tableFilter) {
+            card.classList.add('active-filter');
+        } else {
+            card.classList.remove('active-filter');
+        }
+    });
+
+    // Filter tables based on g_tableFilter
+    const filteredTables = g_tables.filter(table => {
+        if (g_tableFilter === 'all') return true;
+        if (g_tableFilter === 'available') return table.status === 'available';
+        if (g_tableFilter === 'active') return table.status !== 'available';
+        if (g_tableFilter === 'preparing') return ['preparing', 'placed', 'confirmed', 'ready'].includes(table.status);
+        if (g_tableFilter === 'delivered') return table.status === 'delivered';
+        if (g_tableFilter === 'revenue') return table.totalAmount > 0 || table.status !== 'available';
+        return true;
+    });
+
+    // Update Filter Header text and reset button visibility
+    const filterTitleEl = document.getElementById('tables-filter-title');
+    const filterSubtitleEl = document.getElementById('tables-filter-subtitle');
+    const resetBtnEl = document.getElementById('btn-reset-table-filter');
+
+    if (g_tableFilter === 'all') {
+        if (filterTitleEl) filterTitleEl.textContent = `All Tables (${totalTables})`;
+        if (filterSubtitleEl) filterSubtitleEl.textContent = 'Select a table below to start a new order or manage active sessions.';
+        if (resetBtnEl) resetBtnEl.classList.add('hidden');
+    } else if (g_tableFilter === 'available') {
+        if (filterTitleEl) filterTitleEl.textContent = `Available Tables (${availableCount})`;
+        if (filterSubtitleEl) filterSubtitleEl.textContent = 'Showing open tables ready for guest seating and new food orders.';
+        if (resetBtnEl) resetBtnEl.classList.remove('hidden');
+    } else if (g_tableFilter === 'active') {
+        if (filterTitleEl) filterTitleEl.textContent = `Active Order Tables (${activeOrdersCount})`;
+        if (filterSubtitleEl) filterSubtitleEl.textContent = 'Showing tables with ongoing active orders or draft ordering sessions.';
+        if (resetBtnEl) resetBtnEl.classList.remove('hidden');
+    } else if (g_tableFilter === 'preparing') {
+        if (filterTitleEl) filterTitleEl.textContent = `Preparing Kitchen Tables (${preparingCount})`;
+        if (filterSubtitleEl) filterSubtitleEl.textContent = 'Showing tables with food currently being prepared in the kitchen.';
+        if (resetBtnEl) resetBtnEl.classList.remove('hidden');
+    } else if (g_tableFilter === 'delivered') {
+        if (filterTitleEl) filterTitleEl.textContent = `Delivered Tables (${deliveredCount})`;
+        if (filterSubtitleEl) filterSubtitleEl.textContent = 'Showing tables where food has been delivered to guests.';
+        if (resetBtnEl) resetBtnEl.classList.remove('hidden');
+    } else if (g_tableFilter === 'revenue') {
+        if (filterTitleEl) filterTitleEl.textContent = `Revenue Active Tables (Today: ₹${todayRevenue})`;
+        if (filterSubtitleEl) filterSubtitleEl.textContent = 'Showing active tables contributing to today\'s canteen transactions.';
+        if (resetBtnEl) resetBtnEl.classList.remove('hidden');
+    }
+
+    // Render Filter Empty State
+    if (filteredTables.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-tables-filter">
+                <i class="fa-solid fa-filter-circle-xmark"></i>
+                <h3>No Tables Found</h3>
+                <p>There are currently no tables matching the selected filter.</p>
+                <button class="btn btn-primary btn-sm" onclick="resetTableFilter()"><i class="fa-solid fa-rotate-left"></i> Show All Tables</button>
+            </div>
+        `;
+    } else {
+        filteredTables.forEach(table => {
+            // Render card
+            const card = document.createElement('div');
+            card.className = `table-card ${table.status}`;
+            card.setAttribute('data-id', table.id);
+
+            let statusText = 'Available';
+            if (table.status === 'ordering') statusText = 'Ordering';
+            else if (table.status === 'placed' || table.status === 'confirmed') statusText = 'Order Confirmed';
+            else if (table.status === 'preparing') statusText = 'Preparing';
+            else if (table.status === 'ready') statusText = 'Order Ready';
+            else if (table.status === 'delivered') statusText = 'Delivered';
+
+            let orderIdDisplay = table.currentOrderId || '—';
+            let customerDisplay = table.customerName || '—';
+            let timeDisplay = table.startTime ? formatTimeStr(new Date(table.startTime)) : '—';
+            let itemsVal = table.itemsCount > 0 ? `${table.itemsCount} Items` : '—';
+            let totalVal = table.totalAmount > 0 ? `₹${table.totalAmount}` : '—';
+
+            card.innerHTML = `
+                <h3>Table ${String(table.id).padStart(2, '0')}</h3>
+                <span class="table-status-pill status-${table.status}">${statusText}</span>
+                <div class="table-card-img-wrapper">
+                    <img src="images/restaurant_table.png" alt="Table Scene">
+                </div>
+                <div class="table-details-list">
+                    <div class="detail-row">
+                        <span>Order ID:</span>
+                        <span>${orderIdDisplay}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Customer:</span>
+                        <span>${customerDisplay}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Time:</span>
+                        <span>${timeDisplay}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Items:</span>
+                        <span>${itemsVal}</span>
+                    </div>
+                    <div class="detail-row total-amount">
+                        <span>Total:</span>
+                        <span>${totalVal}</span>
+                    </div>
+                </div>
+            `;
+
+            card.addEventListener('click', () => selectTable(table.id));
+            grid.appendChild(card);
+        });
+    }
 
     // Render Dashboard Food Items Showcase Grid
     renderDashboardFoodGrid();
