@@ -1832,14 +1832,14 @@ function markOrderPaid(orderId) {
     order.paymentStatus = 'paid';
     
     // Automatically transition order status to delivered if paid
-    if (order.status === 'ready') {
+    if (order.status === 'ready' || order.status === 'placed' || order.status === 'preparing') {
         order.status = 'delivered';
     }
 
     Storage.saveOrders(g_orders);
     showToast(`Order ${orderId} marked as Paid!`, 'success');
 
-    // Update active table reference status
+    // Update ONLY the specific table tied to this order
     const table = g_tables.find(t => t.id === order.tableId);
     if (table && table.currentOrderId === orderId) {
         table.status = 'delivered';
@@ -1849,9 +1849,10 @@ function markOrderPaid(orderId) {
     generateInvoice(orderId); // Refresh view
 }
 
-// Explicitly release a table and make it AVAILABLE again
+// Explicitly release a single table and make it AVAILABLE again (100% isolated to target table)
 function releaseTable(tableId) {
-    const table = g_tables.find(t => t.id === tableId);
+    const targetId = parseInt(tableId, 10);
+    const table = g_tables.find(t => t.id === targetId);
     if (!table) return;
 
     const orderId = table.currentOrderId;
@@ -1866,7 +1867,7 @@ function releaseTable(tableId) {
         }
     }
 
-    // Reset table variables to initial Available state
+    // Reset ONLY the target table back to default Available state
     table.status = 'available';
     table.currentOrderId = null;
     table.customerName = null;
@@ -1875,15 +1876,20 @@ function releaseTable(tableId) {
     table.itemsCount = 0;
     table.totalAmount = 0;
     table.startTime = null;
+
+    if (g_activeTableId === targetId) {
+        g_activeTableId = null;
+    }
     
     Storage.saveTables(g_tables);
 
-    showToast(`Table ${String(tableId).padStart(2, '0')} released! Status is now AVAILABLE.`, 'success');
+    showToast(`Table ${String(targetId).padStart(2, '0')} order completed! Status is now AVAILABLE.`, 'success');
     renderDashboard();
+    renderCart();
     showSection('dashboard');
 }
 
-// Mark order delivered and release the Table
+// Mark order delivered and release ONLY that specific Table
 function markOrderDelivered(orderId) {
     const order = g_orders.find(o => o.orderId === orderId);
     if (order) {
