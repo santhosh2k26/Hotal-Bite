@@ -1109,12 +1109,6 @@ function selectNextAvailableTable() {
     
     if (nextTable) {
         g_activeTableId = nextTable.id;
-        if (nextTable.status === 'available') {
-            nextTable.status = 'ordering';
-            nextTable.currentOrderId = generateNewOrderId();
-            nextTable.startTime = new Date().toISOString();
-            Storage.saveTables(g_tables);
-        }
     }
     return g_activeTableId;
 }
