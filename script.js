@@ -80,89 +80,13 @@ const USERS = [
 ];
 
 // =========================================================================
-// 2. STATE MANAGER & STORAGE LAYER
+// 2. STATE MANAGER & USER-ISOLATED STORAGE LAYER
 // =========================================================================
 const Storage = {
-    getTables() {
-        try {
-            const t = localStorage.getItem('hb_tables');
-            if (!t) return JSON.parse(JSON.stringify(DEFAULT_TABLES));
-            const parsed = JSON.parse(t);
-            if (Array.isArray(parsed) && parsed.length === 10) {
-                // Ensure each table object has the proper keys
-                const isValid = parsed.every(table => 
-                    table && 
-                    typeof table.id === 'number' && 
-                    typeof table.status === 'string' &&
-                    Array.isArray(table.items)
-                );
-                if (isValid) return parsed;
-            }
-            return JSON.parse(JSON.stringify(DEFAULT_TABLES));
-        } catch (e) {
-            console.error("Failed to load tables from storage:", e);
-            return JSON.parse(JSON.stringify(DEFAULT_TABLES));
-        }
-    },
-    saveTables(tables) {
-        try {
-            localStorage.setItem('hb_tables', JSON.stringify(tables));
-        } catch (e) {
-            console.error("Failed to save tables to storage:", e);
-        }
-    },
-    getOrders() {
-        try {
-            const o = localStorage.getItem('hb_orders');
-            if (!o) return [];
-            const parsed = JSON.parse(o);
-            if (Array.isArray(parsed)) {
-                // Ensure each order object has proper keys
-                const isValid = parsed.every(order => 
-                    order && 
-                    typeof order.orderId === 'string' && 
-                    typeof order.tableId === 'number' && 
-                    Array.isArray(order.items)
-                );
-                if (isValid) return parsed;
-            }
-            return [];
-        } catch (e) {
-            console.error("Failed to load orders from storage:", e);
-            return [];
-        }
-    },
-    saveOrders(orders) {
-        try {
-            localStorage.setItem('hb_orders', JSON.stringify(orders));
-        } catch (e) {
-            console.error("Failed to save orders to storage:", e);
-        }
-    },
-    getNextOrderId() {
-        try {
-            const id = localStorage.getItem('hb_next_order_id');
-            if (!id) return 1;
-            const parsed = parseInt(id);
-            return isNaN(parsed) ? 1 : parsed;
-        } catch (e) {
-            console.error("Failed to load next order id from storage:", e);
-            return 1;
-        }
-    },
-    saveNextOrderId(id) {
-        try {
-            localStorage.setItem('hb_next_order_id', id);
-        } catch (e) {
-            console.error("Failed to save next order id to storage:", e);
-        }
-    },
     getCurrentUser() {
         try {
-            const sessionUser = sessionStorage.getItem("loggedInUser");
+            const sessionUser = sessionStorage.getItem("hb_active_user");
             if (sessionUser) return JSON.parse(sessionUser);
-            const localUser = localStorage.getItem("hb_current_user");
-            if (localUser) return JSON.parse(localUser);
             return null;
         } catch (e) {
             console.error("Failed to load current user from storage:", e);
@@ -172,14 +96,110 @@ const Storage = {
     saveCurrentUser(userObj) {
         try {
             if (userObj) {
-                sessionStorage.setItem("loggedInUser", JSON.stringify(userObj));
-                localStorage.setItem("hb_current_user", JSON.stringify(userObj));
+                sessionStorage.setItem("hb_active_user", JSON.stringify(userObj));
             } else {
-                sessionStorage.clear();
-                localStorage.removeItem("hb_current_user");
+                sessionStorage.removeItem("hb_active_user");
             }
         } catch (e) {
             console.error("Failed to save current user to storage:", e);
+        }
+    },
+    getUserStoragePrefix() {
+        const user = this.getCurrentUser();
+        const username = (user && user.username) ? user.username.toLowerCase().replace(/[^a-z0-9]/g, '') : 'guest';
+        return `hb_user_${username}_`;
+    },
+    getTables() {
+        try {
+            const prefix = this.getUserStoragePrefix();
+            const t = localStorage.getItem(prefix + 'tables');
+            if (t) {
+                const parsed = JSON.parse(t);
+                if (Array.isArray(parsed) && parsed.length === 10) return parsed;
+            }
+            // Migration check from legacy single key if available
+            const legacy = localStorage.getItem('hb_tables');
+            if (legacy) {
+                const parsedLegacy = JSON.parse(legacy);
+                if (Array.isArray(parsedLegacy) && parsedLegacy.length === 10) return parsedLegacy;
+            }
+            return JSON.parse(JSON.stringify(DEFAULT_TABLES));
+        } catch (e) {
+            console.error("Failed to load user tables from storage:", e);
+            return JSON.parse(JSON.stringify(DEFAULT_TABLES));
+        }
+    },
+    saveTables(tables) {
+        try {
+            const prefix = this.getUserStoragePrefix();
+            localStorage.setItem(prefix + 'tables', JSON.stringify(tables));
+        } catch (e) {
+            console.error("Failed to save user tables to storage:", e);
+        }
+    },
+    getOrders() {
+        try {
+            const prefix = this.getUserStoragePrefix();
+            const o = localStorage.getItem(prefix + 'orders');
+            if (o) {
+                const parsed = JSON.parse(o);
+                if (Array.isArray(parsed)) return parsed;
+            }
+            // Migration check from legacy key
+            const legacy = localStorage.getItem('hb_orders');
+            if (legacy) {
+                const parsedLegacy = JSON.parse(legacy);
+                if (Array.isArray(parsedLegacy)) return parsedLegacy;
+            }
+            return [];
+        } catch (e) {
+            console.error("Failed to load user orders from storage:", e);
+            return [];
+        }
+    },
+    saveOrders(orders) {
+        try {
+            const prefix = this.getUserStoragePrefix();
+            localStorage.setItem(prefix + 'orders', JSON.stringify(orders));
+        } catch (e) {
+            console.error("Failed to save user orders to storage:", e);
+        }
+    },
+    getNextOrderId() {
+        try {
+            const prefix = this.getUserStoragePrefix();
+            const id = localStorage.getItem(prefix + 'next_order_id');
+            if (id) {
+                const parsed = parseInt(id, 10);
+                if (!isNaN(parsed)) return parsed;
+            }
+            const legacy = localStorage.getItem('hb_next_order_id');
+            if (legacy) {
+                const parsedLegacy = parseInt(legacy, 10);
+                if (!isNaN(parsedLegacy)) return parsedLegacy;
+            }
+            return 1;
+        } catch (e) {
+            console.error("Failed to load user next order id from storage:", e);
+            return 1;
+        }
+    },
+    saveNextOrderId(id) {
+        try {
+            const prefix = this.getUserStoragePrefix();
+            localStorage.setItem(prefix + 'next_order_id', id.toString());
+        } catch (e) {
+            console.error("Failed to save user next order id to storage:", e);
+        }
+    },
+    clearCurrentUserData() {
+        try {
+            const prefix = this.getUserStoragePrefix();
+            localStorage.removeItem(prefix + 'tables');
+            localStorage.removeItem(prefix + 'orders');
+            localStorage.removeItem(prefix + 'next_order_id');
+        } catch (e) {
+            console.error("Failed to clear current user storage data:", e);
         }
     }
 };
@@ -199,37 +219,19 @@ let g_modalCallback = null;
 // 3. INITIALIZATION & ROUTING
 // =========================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Load local storage states
-    g_tables = Storage.getTables();
-    g_orders = Storage.getOrders();
-    g_nextOrderIdCounter = Storage.getNextOrderId();
+    // Always start at Login screen when coming back / loading page
+    Storage.saveCurrentUser(null);
+    document.body.classList.add('login-active');
+    document.getElementById('app-shell').classList.add('hidden');
 
-    // Verify session
-    const loggedInUser = Storage.getCurrentUser();
-    if (loggedInUser) {
-        document.body.classList.remove('login-active');
-        document.getElementById('app-shell').classList.remove('hidden');
-        updateUserUI(loggedInUser);
-        showSection('dashboard');
-    } else {
-        document.body.classList.add('login-active');
-        document.getElementById('app-shell').classList.add('hidden');
-        const loginForm = document.getElementById('login-form');
-        if (loginForm) loginForm.reset();
-        const errorEl = document.getElementById('errorMessage');
-        if (errorEl) errorEl.style.display = 'none';
-    }
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) loginForm.reset();
+    const errorEl = document.getElementById('errorMessage');
+    if (errorEl) errorEl.style.display = 'none';
 
     // Run active clock
     startClock();
     
-    // Select first available table
-    selectNextAvailableTable();
-    
-    // Initial renders
-    renderDashboard();
-    initMenu();
-
     // Attach all UI triggers
     attachEventListeners();
 });
@@ -479,33 +481,31 @@ function attachEventListeners() {
 
         Storage.saveCurrentUser(userObj);
 
-        // 100% BRAND NEW WEBSITE RESET ON EVERY LOGIN:
-        // Reset all 10 tables to default clean "Available" status
-        g_tables = JSON.parse(JSON.stringify(DEFAULT_TABLES));
-        Storage.saveTables(g_tables);
+        // Load THIS SPECIFIC USER'S persistent saved data from isolated storage
+        g_tables = Storage.getTables();
+        g_orders = Storage.getOrders();
+        g_nextOrderIdCounter = Storage.getNextOrderId();
 
-        // Clear active cart & active table selections
+        // Clear active temporary session memory
         g_cart = [];
         g_activeTableId = null;
         g_tableFilter = 'all';
 
-        // Clear previous orders history & reset order counter back to #ORD-001
-        g_orders = [];
-        g_nextOrderIdCounter = 1;
-        Storage.saveOrders(g_orders);
-        Storage.saveNextOrderId(1);
-        
+        // Select first available table for new active session
+        selectNextAvailableTable();
+
         document.body.classList.remove('login-active');
         document.getElementById('app-shell').classList.remove('hidden');
         
         updateUserUI(userObj);
+        initMenu();
         renderCart();
         renderDashboard();
         
         showSection('dashboard');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         
-        showToast(`Welcome, ${userObj.username}! Opening brand new clean website session.`, 'success');
+        showToast(`Welcome back, ${userObj.username}! Your saved session data has been loaded.`, 'success');
         
         const loginForm = document.getElementById('login-form');
         if (loginForm) loginForm.reset();
@@ -524,18 +524,38 @@ function attachEventListeners() {
         }
     });
 
-    // 2. LOGOUT HANDLERS (Navbar & Settings Page Logout)
+    // 2. LOGOUT HANDLERS (Settings Page & Navbar Logout)
     const performLogout = () => {
         openConfirmModal('Logout Session', 'Are you sure you want to log out of the HostelBite system?', false, () => {
+            // Save latest state of current user before logging out
+            if (Storage.getCurrentUser()) {
+                Storage.saveTables(g_tables);
+                Storage.saveOrders(g_orders);
+                Storage.saveNextOrderId(g_nextOrderIdCounter);
+            }
+
+            // Clear current active user session
             Storage.saveCurrentUser(null);
+
+            // Clear temporary in-memory session data
+            g_tables = [];
+            g_orders = [];
+            g_cart = [];
+            g_activeTableId = null;
+            g_nextOrderIdCounter = 1;
+
+            // Return to Login Page
             document.body.classList.add('login-active');
             document.getElementById('app-shell').classList.add('hidden');
+
             const errorEl = document.getElementById('errorMessage');
             if (errorEl) errorEl.style.display = 'none';
+
             const loginForm = document.getElementById('login-form');
             if (loginForm) loginForm.reset();
+
             closeConfirmModal();
-            showToast('Logged out successfully.', 'info');
+            showToast('Logged out successfully. Your session data has been saved.', 'info');
         });
     };
 
