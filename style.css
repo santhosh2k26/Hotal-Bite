@@ -1564,15 +1564,21 @@ p {
 /* ========================================================================= */
 .ordering-layout {
     display: grid;
-    grid-template-columns: 1fr 380px;
+    grid-template-columns: minmax(0, 1fr) 380px;
     gap: 30px;
     align-items: start;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .ordering-menu-area {
     display: flex;
     flex-direction: column;
     gap: 24px;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
 }
 
 .ordering-details-header {
@@ -1714,35 +1720,136 @@ p {
 .food-menu-container {
     display: flex;
     flex-direction: column;
-    gap: 40px;
+    gap: 36px;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
 }
 
 .menu-category-section {
     animation: viewFadeIn 0.4s ease-out;
-}
-
-.category-title {
-    font-size: 1.3rem;
-    margin-bottom: 20px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid rgba(245, 158, 11, 0.2);
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
     position: relative;
 }
 
-.category-title::before {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 60px;
-    height: 2px;
-    background: var(--accent-light);
+.category-header-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(245, 158, 11, 0.25);
+    position: relative;
+    width: 100%;
+}
+
+.category-header-wrapper .category-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.category-scroll-btns {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.grid-scroll-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(245, 158, 11, 0.18);
+    border: 1.5px solid rgba(245, 158, 11, 0.5) !important;
+    color: var(--accent-light);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition-bounce);
+    font-size: 0.95rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.grid-scroll-btn:hover {
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-light));
+    color: #ffffff;
+    border-color: var(--accent-light) !important;
+    transform: scale(1.15);
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.6);
+}
+
+.grid-scroll-btn:active {
+    transform: scale(0.95);
+}
+
+.food-grid-container {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    position: relative;
+    overflow: hidden;
 }
 
 .food-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-    gap: 16px;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    gap: 18px !important;
+    padding-bottom: 16px;
+    padding-top: 6px;
+    padding-left: 2px;
+    padding-right: 2px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-purple) rgba(20, 12, 6, 0.6);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    cursor: grab;
+    user-select: none;
+}
+
+.food-grid:active {
+    cursor: grabbing;
+}
+
+.food-grid::-webkit-scrollbar {
+    height: 8px;
+}
+
+.food-grid::-webkit-scrollbar-track {
+    background: rgba(20, 12, 6, 0.6);
+    border-radius: 8px;
+}
+
+.food-grid::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, var(--accent-purple), var(--accent-light));
+    border-radius: 8px;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+.food-grid::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, var(--accent-light), #fff);
+}
+
+.food-grid .food-card {
+    flex: 0 0 220px !important;
+    width: 220px !important;
+    min-width: 220px !important;
+    max-width: 220px !important;
+    scroll-snap-align: start;
 }
 
 /* Food Cards - Swiggy Style Compact Cards */

@@ -1343,6 +1343,9 @@ function renderMenu() {
     } else {
         emptyState.classList.add('hidden');
     }
+
+    // Attach horizontal mouse wheel and drag scroll handlers
+    enableDragAndWheelScroll();
 }
 
 function getCategoryIcon(cat) {
@@ -2091,7 +2094,68 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Horizontal Grid Scroll Helper
+function scrollGrid(gridId, amount) {
+    const grid = document.getElementById(gridId);
+    if (grid) {
+        grid.scrollBy({ left: amount || 280, behavior: 'smooth' });
+    }
+}
+
+// Enable Horizontal Drag and Mouse-Wheel Scrolling on all food grids
+function enableDragAndWheelScroll() {
+    const scrollContainers = document.querySelectorAll('.food-grid, .food-container');
+    scrollContainers.forEach(slider => {
+        if (slider.dataset.scrollEnhanced === 'true') return;
+        slider.dataset.scrollEnhanced = 'true';
+
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+
+        // Smooth horizontal mouse wheel scrolling
+        slider.addEventListener('wheel', (e) => {
+            if (e.deltaY !== 0 && !e.shiftKey) {
+                // If scrolling horizontally is possible
+                if (slider.scrollWidth > slider.clientWidth) {
+                    e.preventDefault();
+                    slider.scrollLeft += e.deltaY;
+                }
+            }
+        }, { passive: false });
+
+        // Mouse click and drag to scroll
+        slider.addEventListener('mousedown', (e) => {
+            if (e.target.closest('button, input, a, select')) return;
+            isDown = true;
+            slider.classList.add('active-dragging');
+            startX = e.pageX - slider.offsetLeft;
+            scrollLeft = slider.scrollLeft;
+        });
+
+        slider.addEventListener('mouseleave', () => {
+            isDown = false;
+            slider.classList.remove('active-dragging');
+        });
+
+        slider.addEventListener('mouseup', () => {
+            isDown = false;
+            slider.classList.remove('active-dragging');
+        });
+
+        slider.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - slider.offsetLeft;
+            const walk = (x - startX) * 1.5;
+            slider.scrollLeft = scrollLeft - walk;
+        });
+    });
+}
+
 // Expose functions globally to window for HTML inline onclick handlers
+window.scrollGrid = scrollGrid;
+window.enableDragAndWheelScroll = enableDragAndWheelScroll;
 window.resetData = resetData;
 window.resetTables = resetTables;
 window.resetOrders = resetOrders;
