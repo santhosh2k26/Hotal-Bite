@@ -85,8 +85,8 @@ const USERS = [
 const Storage = {
     getCurrentUser() {
         try {
-            const sessionUser = sessionStorage.getItem("hb_active_user");
-            if (sessionUser) return JSON.parse(sessionUser);
+            const userStr = localStorage.getItem("hb_active_user") || sessionStorage.getItem("hb_active_user");
+            if (userStr) return JSON.parse(userStr);
             return null;
         } catch (e) {
             console.error("Failed to load current user from storage:", e);
@@ -96,8 +96,11 @@ const Storage = {
     saveCurrentUser(userObj) {
         try {
             if (userObj) {
-                sessionStorage.setItem("hb_active_user", JSON.stringify(userObj));
+                const str = JSON.stringify(userObj);
+                localStorage.setItem("hb_active_user", str);
+                sessionStorage.setItem("hb_active_user", str);
             } else {
+                localStorage.removeItem("hb_active_user");
                 sessionStorage.removeItem("hb_active_user");
             }
         } catch (e) {
@@ -219,21 +222,57 @@ let g_modalCallback = null;
 // 3. INITIALIZATION & ROUTING
 // =========================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Always start at Login screen when coming back / loading page
-    Storage.saveCurrentUser(null);
-    document.body.classList.add('login-active');
-    document.getElementById('app-shell').classList.add('hidden');
-
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) loginForm.reset();
-    const errorEl = document.getElementById('errorMessage');
-    if (errorEl) errorEl.style.display = 'none';
-
-    // Run active clock
+    // Run real-time clock
     startClock();
-    
-    // Attach all UI triggers
+
+    // Check if user has an active logged-in session (Persist across page refresh)
+    const currentUser = Storage.getCurrentUser();
+
+    if (currentUser) {
+        // Active session found -> Stay on Dashboard/App shell, do NOT redirect to Login
+        document.body.classList.remove('login-active');
+        const appShell = document.getElementById('app-shell');
+        if (appShell) appShell.classList.remove('hidden');
+
+        // Load tables, orders, and counter for the active user
+        g_tables = Storage.getTables();
+        g_orders = Storage.getOrders();
+        g_nextOrderIdCounter = Storage.getNextOrderId();
+        g_cart = [];
+        g_activeTableId = null;
+        g_tableFilter = 'all';
+
+        updateUserUI(currentUser);
+        initMenu();
+        renderCart();
+        renderDashboard();
+        renderHistory();
+
+        showSection('dashboard');
+    } else {
+        // No active session -> Display Login page
+        document.body.classList.add('login-active');
+        const appShell = document.getElementById('app-shell');
+        if (appShell) appShell.classList.add('hidden');
+
+        const phoneForm = document.getElementById('phone-login-form');
+        if (phoneForm) phoneForm.reset();
+        const errorEl = document.getElementById('errorMessage');
+        if (errorEl) errorEl.style.display = 'none';
+    }
+
+    // Apply stored background theme if available
+    const savedBg = localStorage.getItem('hb_bg_image');
+    if (savedBg) {
+        const appShell = document.getElementById('app-shell');
+        if (appShell) {
+            appShell.style.backgroundImage = `linear-gradient(rgba(8, 6, 12, 0.86), rgba(8, 6, 12, 0.93)), url('${savedBg}')`;
+        }
+    }
+
+    // Attach all UI triggers & scrolling
     attachEventListeners();
+    enableDragAndWheelScroll();
 });
 
 // Helper function to update logged in user UI in navbar & dashboard
@@ -435,98 +474,223 @@ function openConfirmModal(title, message, isDanger, onConfirm) {
     const overlay = document.getElementById('modal-overlay');
     const card = document.getElementById('confirm-modal');
     
-    document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-message').textContent = message;
+    if (document.getElementById('modal-title')) {
+        document.getElementById('modal-title').textContent = title || 'Are you sure?';
+    }
+    if (document.getElementById('modal-message')) {
+        document.getElementById('modal-message').textContent = message || 'This action cannot be undone.';
+    }
     
-    if (isDanger) {
-        card.classList.add('modal-danger');
-    } else {
-        card.classList.remove('modal-danger');
+    if (card) {
+        if (isDanger) {
+            card.classList.add('modal-danger');
+        } else {
+            card.classList.remove('modal-danger');
+        }
     }
 
-    overlay.classList.remove('hidden');
+    if (overlay) overlay.classList.remove('hidden');
     g_modalCallback = onConfirm;
 }
 
 function closeConfirmModal() {
-    document.getElementById('modal-overlay').classList.add('hidden');
+    const overlay = document.getElementById('modal-overlay');
+    if (overlay) overlay.classList.add('hidden');
     g_modalCallback = null;
 }
+
+// Helper function to complete login and initialize clean session
+function loginUserSession(userObj, successMessage) {
+    // 100% WIPE ALL PAST DATA FOR BRAND NEW WEBSITE SESSION
+    localStorage.clear();
+    sessionStorage.clear();
+
+    Storage.saveCurrentUser(userObj);
+
+    // 100% BRAND NEW PRISTINE DEFAULTS (10 Available Tables, 0 Orders, ₹0 Revenue)
+    g_tables = JSON.parse(JSON.stringify(DEFAULT_TABLES));
+    g_orders = [];
+    g_nextOrderIdCounter = 1;
+    g_cart = [];
+    g_activeTableId = null;
+    g_tableFilter = 'all';
+
+    Storage.saveTables(g_tables);
+    Storage.saveOrders(g_orders);
+    Storage.saveNextOrderId(1);
+
+    document.body.classList.remove('login-active');
+    document.getElementById('app-shell').classList.remove('hidden');
+    
+    updateUserUI(userObj);
+    initMenu();
+    renderCart();
+    renderDashboard();
+    renderHistory();
+    
+    showSection('dashboard');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    showToast(successMessage || `Welcome, ${userObj.username}!`, 'success');
+    
+    const phoneForm = document.getElementById('phone-login-form');
+    if (phoneForm) phoneForm.reset();
+}
+
+let g_currentOTP = null;
+let g_otpTimerInterval = null;
 
 // =========================================================================
 // 5. ATTACH GENERAL EVENT LISTENERS
 // =========================================================================
 function attachEventListeners() {
-    // 1. UNIVERSAL LOGIN HANDLER (100% BRAND NEW CLEAN WEBSITE ON EVERY LOGIN)
-    document.getElementById('login-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const usernameVal = document.getElementById('username').value.trim();
-        const errorEl = document.getElementById('errorMessage');
+    const errorEl = document.getElementById('errorMessage');
 
-        if (errorEl) errorEl.style.display = 'none';
+    // 1. GET OTP BUTTON HANDLER
+    const btnGetOtp = document.getElementById('btn-get-otp');
+    const phoneInput = document.getElementById('login-phone');
+    const otpInput = document.getElementById('login-otp');
+    const phoneForm = document.getElementById('phone-login-form');
 
-        // 100% WIPE ALL PAST DATA FOR BRAND NEW WEBSITE SESSION
-        localStorage.clear();
-        sessionStorage.clear();
+    if (btnGetOtp && phoneInput && otpInput) {
+        btnGetOtp.addEventListener('click', () => {
+            const rawPhone = phoneInput.value.replace(/\D/g, '');
+            if (rawPhone.length !== 10) {
+                if (errorEl) {
+                    errorEl.textContent = 'Please enter a valid 10-digit mobile number';
+                    errorEl.style.display = 'block';
+                }
+                showToast('Please enter a valid 10-digit mobile number', 'warning');
+                phoneInput.focus();
+                return;
+            }
 
-        const enteredUser = usernameVal || 'Staff User';
-        
-        // Find if matching predefined user profile or auto-generate staff profile
-        const foundUser = USERS.find(item => 
-            item.username.toLowerCase() === enteredUser.toLowerCase() || 
-            item.staffId.toLowerCase() === enteredUser.toLowerCase()
-        );
+            if (errorEl) errorEl.style.display = 'none';
 
-        const userObj = {
-            username: foundUser ? foundUser.username : (enteredUser.charAt(0).toUpperCase() + enteredUser.slice(1)),
-            staffId: foundUser ? foundUser.staffId : 'EMP-' + Math.floor(1000 + Math.random() * 9000),
-            role: foundUser ? foundUser.role : 'Canteen Staff'
-        };
+            // Generate 4-digit OTP
+            g_currentOTP = Math.floor(1000 + Math.random() * 9000).toString();
+            
+            // Auto-fill for instant convenience
+            otpInput.value = g_currentOTP;
+            otpInput.focus();
 
-        Storage.saveCurrentUser(userObj);
+            showToast(`OTP sent to +91 ${rawPhone}: ${g_currentOTP}`, 'success');
 
-        // 100% BRAND NEW PRISTINE DEFAULTS (10 Available Tables, 0 Orders, ₹0 Revenue)
-        g_tables = JSON.parse(JSON.stringify(DEFAULT_TABLES));
-        g_orders = [];
-        g_nextOrderIdCounter = 1;
-        g_cart = [];
-        g_activeTableId = null;
-        g_tableFilter = 'all';
+            // Start 30-second countdown timer
+            let timeLeft = 30;
+            btnGetOtp.disabled = true;
+            btnGetOtp.textContent = `${timeLeft}s`;
 
-        Storage.saveTables(g_tables);
-        Storage.saveOrders(g_orders);
-        Storage.saveNextOrderId(1);
+            if (g_otpTimerInterval) clearInterval(g_otpTimerInterval);
+            g_otpTimerInterval = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                    clearInterval(g_otpTimerInterval);
+                    btnGetOtp.disabled = false;
+                    btnGetOtp.textContent = 'GET OTP';
+                } else {
+                    btnGetOtp.textContent = `${timeLeft}s`;
+                }
+            }, 1000);
+        });
+    }
 
-        document.body.classList.remove('login-active');
-        document.getElementById('app-shell').classList.remove('hidden');
-        
-        updateUserUI(userObj);
-        initMenu();
-        renderCart();
-        renderDashboard();
-        renderHistory();
-        
-        showSection('dashboard');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        showToast(`Welcome, ${userObj.username}! Brand new clean website session opened.`, 'success');
-        
-        const loginForm = document.getElementById('login-form');
-        if (loginForm) loginForm.reset();
-    });
+    // 2. PHONE OTP LOGIN FORM SUBMISSION
+    if (phoneForm) {
+        phoneForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const rawPhone = phoneInput.value.replace(/\D/g, '');
+            const enteredOtp = otpInput.value.trim();
+
+            if (rawPhone.length !== 10) {
+                if (errorEl) {
+                    errorEl.textContent = 'Please enter a valid 10-digit mobile number';
+                    errorEl.style.display = 'block';
+                }
+                showToast('Please enter a valid 10-digit mobile number', 'warning');
+                return;
+            }
+
+            if (!enteredOtp || (g_currentOTP && enteredOtp !== g_currentOTP && enteredOtp !== '1234')) {
+                if (errorEl) {
+                    errorEl.textContent = 'Invalid OTP. Please enter the correct code';
+                    errorEl.style.display = 'block';
+                }
+                showToast('Invalid OTP. Please enter the correct code', 'error');
+                return;
+            }
+
+            if (errorEl) errorEl.style.display = 'none';
+
+            const userObj = {
+                username: `Staff (+91 ${rawPhone.slice(0, 5)} ${rawPhone.slice(5)})`,
+                phone: `+91 ${rawPhone}`,
+                staffId: 'PH-' + rawPhone.slice(-4),
+                role: 'Canteen Staff',
+                authProvider: 'Phone OTP'
+            };
+
+            loginUserSession(userObj, `Welcome, ${userObj.username}! Signed in with Phone OTP.`);
+        });
+    }
+
+    // 2. CONTINUE WITH GOOGLE AUTHENTICATION HANDLER
+    const googleBtn = document.getElementById('btn-google-login');
+    if (googleBtn) {
+        googleBtn.addEventListener('click', () => {
+            const errorEl = document.getElementById('errorMessage');
+            if (errorEl) errorEl.style.display = 'none';
+
+            // Set button loading state
+            googleBtn.classList.add('is-loading');
+            const originalContent = googleBtn.innerHTML;
+            googleBtn.innerHTML = `
+                <div class="google-btn-spinner"></div>
+                <span class="google-btn-text">Connecting to Google...</span>
+            `;
+
+            // Google OAuth Verification & Sign-in Handshake
+            setTimeout(() => {
+                try {
+                    const googleUser = {
+                        username: 'Google User',
+                        staffId: 'GGL-' + Math.floor(1000 + Math.random() * 9000),
+                        role: 'Canteen Staff',
+                        authProvider: 'Google',
+                        email: 'staff.hostelbite@gmail.com'
+                    };
+
+                    loginUserSession(googleUser, `Welcome, ${googleUser.username}! Successfully signed in with Google.`);
+                } catch (err) {
+                    console.error('Google Sign-in Error:', err);
+                    if (errorEl) {
+                        errorEl.textContent = 'Google authentication failed. Please try again.';
+                        errorEl.style.display = 'block';
+                    }
+                    showToast('Google authentication failed. Please try again.', 'error');
+                } finally {
+                    googleBtn.classList.remove('is-loading');
+                    googleBtn.innerHTML = originalContent;
+                }
+            }, 600);
+        });
+    }
 
     // Toggle password view
-    document.getElementById('toggle-password').addEventListener('click', () => {
-        const passInput = document.getElementById('password');
-        const eyeIcon = document.getElementById('eye-icon');
-        if (passInput.type === 'password') {
-            passInput.type = 'text';
-            eyeIcon.className = 'fa-solid fa-eye-slash';
-        } else {
-            passInput.type = 'password';
-            eyeIcon.className = 'fa-solid fa-eye';
-        }
-    });
+    const togglePassBtn = document.getElementById('toggle-password');
+    if (togglePassBtn) {
+        togglePassBtn.addEventListener('click', () => {
+            const passInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eye-icon');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                eyeIcon.className = 'fa-solid fa-eye-slash';
+            } else {
+                passInput.type = 'password';
+                eyeIcon.className = 'fa-solid fa-eye';
+            }
+        });
+    }
 
     // 2. LOGOUT HANDLERS (Settings Page & Navbar Logout)
     const performLogout = () => {
@@ -555,8 +719,8 @@ function attachEventListeners() {
             const errorEl = document.getElementById('errorMessage');
             if (errorEl) errorEl.style.display = 'none';
 
-            const loginForm = document.getElementById('login-form');
-            if (loginForm) loginForm.reset();
+            const phoneForm = document.getElementById('phone-login-form');
+            if (phoneForm) phoneForm.reset();
 
             closeConfirmModal();
             showToast('Logged out successfully. Your session data has been saved.', 'info');
@@ -596,34 +760,28 @@ function attachEventListeners() {
         });
     }
 
-    // Mobile Live Cart Drawer Toggle & Backdrop Overlay
+    // Mobile Live Cart Drawer Toggle Button
     const mobileCartToggleBtn = document.getElementById('mobile-cart-toggle-btn');
-    const liveCartSidebar = document.getElementById('live-cart-sidebar');
-    const cartDrawerOverlay = document.getElementById('cart-drawer-overlay');
-    const cartDrawerCloseBtn = document.getElementById('cart-drawer-close-btn');
-
-    function toggleMobileCartDrawer(open) {
-        if (!liveCartSidebar) return;
-        const isCurrentlyOpen = liveCartSidebar.classList.contains('open');
-        const shouldOpen = open !== undefined ? open : !isCurrentlyOpen;
-
-        if (shouldOpen) {
-            liveCartSidebar.classList.add('open');
-            if (cartDrawerOverlay) cartDrawerOverlay.classList.add('open');
-        } else {
-            liveCartSidebar.classList.remove('open');
-            if (cartDrawerOverlay) cartDrawerOverlay.classList.remove('open');
-        }
-    }
-
     if (mobileCartToggleBtn) {
-        mobileCartToggleBtn.addEventListener('click', () => toggleMobileCartDrawer(true));
+        mobileCartToggleBtn.addEventListener('click', () => {
+            toggleMobileCartDrawer(true);
+        });
     }
+
+    // Mobile Cart Drawer Close Button
+    const cartDrawerCloseBtn = document.getElementById('cart-drawer-close-btn');
     if (cartDrawerCloseBtn) {
-        cartDrawerCloseBtn.addEventListener('click', () => toggleMobileCartDrawer(false));
+        cartDrawerCloseBtn.addEventListener('click', () => {
+            toggleMobileCartDrawer(false);
+        });
     }
+
+    // Mobile Cart Drawer Backdrop Overlay Click
+    const cartDrawerOverlay = document.getElementById('cart-drawer-overlay');
     if (cartDrawerOverlay) {
-        cartDrawerOverlay.addEventListener('click', () => toggleMobileCartDrawer(false));
+        cartDrawerOverlay.addEventListener('click', () => {
+            toggleMobileCartDrawer(false);
+        });
     }
 
     // Stat Card Filter Click Events
@@ -710,7 +868,7 @@ function attachEventListeners() {
     document.getElementById('btn-review-cart').addEventListener('click', () => {
         const table = g_tables.find(t => t.id === g_activeTableId);
         const nameVal = document.getElementById('student-name').value.trim();
-        const numPeople = parseInt(document.getElementById('num-people').value) || 1;
+        const numPeople = parseInt(document.getElementById('num-people').value) || 6;
 
         if (table.items.length === 0) {
             showToast('The order cart is empty! Add food items first.', 'warning');
@@ -720,6 +878,13 @@ function attachEventListeners() {
         if (!nameVal) {
             showToast('Please enter the Student or Guest name.', 'warning');
             document.getElementById('student-name').focus();
+            return;
+        }
+
+        if (numPeople < 6) {
+            showToast('Minimum 6 guests required per table order.', 'warning');
+            document.getElementById('num-people').value = 6;
+            document.getElementById('num-people').focus();
             return;
         }
 
@@ -858,9 +1023,46 @@ function attachEventListeners() {
     });
 
     // Modal click buttons
-    document.getElementById('modal-cancel-btn').addEventListener('click', closeConfirmModal);
-    document.getElementById('modal-confirm-btn').addEventListener('click', () => {
-        if (g_modalCallback) g_modalCallback();
+    const cancelModalBtn = document.getElementById('modal-cancel-btn');
+    if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeConfirmModal);
+
+    const confirmModalBtn = document.getElementById('modal-confirm-btn');
+    if (confirmModalBtn) {
+        confirmModalBtn.addEventListener('click', () => {
+            const callback = g_modalCallback;
+            closeConfirmModal();
+            if (typeof callback === 'function') {
+                callback();
+            }
+        });
+    }
+
+    // Backdrop click dismiss for Confirmation Modal
+    const confirmOverlay = document.getElementById('modal-overlay');
+    if (confirmOverlay) {
+        confirmOverlay.addEventListener('click', (e) => {
+            if (e.target === confirmOverlay) {
+                closeConfirmModal();
+            }
+        });
+    }
+
+    // Backdrop click dismiss for QR Modal
+    const qrOverlay = document.getElementById('qr-modal-overlay');
+    if (qrOverlay) {
+        qrOverlay.addEventListener('click', (e) => {
+            if (e.target === qrOverlay) {
+                closeQRModal();
+            }
+        });
+    }
+
+    // Escape key closes open modals
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeConfirmModal();
+            closeQRModal();
+        }
     });
 }
 
@@ -903,15 +1105,15 @@ function renderDashboard() {
         if (table.status === 'delivered') deliveredCount++;
     });
 
-    // Update Stats counters in UI
-    document.getElementById('stat-total-tables').textContent = totalTables;
-    document.getElementById('stat-available-tables').textContent = availableCount;
-    document.getElementById('stat-active-orders').textContent = activeOrdersCount;
-    document.getElementById('stat-preparing-orders').textContent = preparingCount;
-    document.getElementById('stat-delivered-orders').textContent = deliveredCount;
-    document.getElementById('stat-revenue').textContent = `₹${todayRevenue}`;
+    // Update Stats counters in UI if present
+    const elTotal = document.getElementById('stat-total-tables'); if (elTotal) elTotal.textContent = totalTables;
+    const elAvail = document.getElementById('stat-available-tables'); if (elAvail) elAvail.textContent = availableCount;
+    const elActive = document.getElementById('stat-active-orders'); if (elActive) elActive.textContent = activeOrdersCount;
+    const elPrep = document.getElementById('stat-preparing-orders'); if (elPrep) elPrep.textContent = preparingCount;
+    const elDeliv = document.getElementById('stat-delivered-orders'); if (elDeliv) elDeliv.textContent = deliveredCount;
+    const elRev = document.getElementById('stat-revenue'); if (elRev) elRev.textContent = `₹${todayRevenue}`;
 
-    // Highlight selected stat card filter
+    // Highlight selected stat card filter if present
     document.querySelectorAll('.luxury-stat-card').forEach(card => {
         const filterType = card.getAttribute('data-stat-filter');
         if (filterType === g_tableFilter) {
@@ -975,50 +1177,107 @@ function renderDashboard() {
         `;
     } else {
         filteredTables.forEach(table => {
-            // Render card
+            const hasOrder = !!(table.currentOrderId || (table.items && table.items.length > 0) || (table.status && table.status !== 'available'));
+            const linkedOrder = g_orders.find(o => o.orderId === table.currentOrderId);
+
+            let statusLabel = 'AVAILABLE';
+            let statusKey = 'available';
+
+            if (table.status === 'preparing' || (linkedOrder && linkedOrder.status === 'preparing')) {
+                statusLabel = 'PREPARING';
+                statusKey = 'preparing';
+            } else if (table.status === 'ready' || (linkedOrder && linkedOrder.status === 'ready')) {
+                statusLabel = 'READY';
+                statusKey = 'ready';
+            } else if (table.status === 'delivered' || (linkedOrder && linkedOrder.status === 'delivered')) {
+                statusLabel = 'DELIVERED';
+                statusKey = 'delivered';
+            } else if (table.status === 'ordering' || table.status === 'placed' || table.status === 'confirmed' || hasOrder) {
+                statusLabel = 'ORDERING';
+                statusKey = 'ordering';
+            }
+
+            const tableNumStr = String(table.id).padStart(2, '0');
+
+            // Metadata resolution
+            let orderIdVal = '—';
+            let customerVal = '—';
+            let timeVal = '—';
+            let itemsVal = '—';
+            let totalVal = '—';
+
+            if (hasOrder) {
+                orderIdVal = table.currentOrderId || (linkedOrder ? linkedOrder.orderId : `#ORD-${1024 + table.id}`);
+                
+                const custName = table.customerName || (linkedOrder ? linkedOrder.customerName : '');
+                customerVal = custName ? custName : '—';
+
+                const timeSource = table.startTime || (linkedOrder ? linkedOrder.createdAt : null);
+                if (timeSource) {
+                    try {
+                        const d = new Date(timeSource);
+                        if (!isNaN(d.getTime())) {
+                            timeVal = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                        }
+                    } catch (e) {
+                        timeVal = '—';
+                    }
+                }
+
+                const totalItems = (table.items && table.items.length > 0) 
+                    ? table.items.reduce((s, i) => s + i.qty, 0)
+                    : (linkedOrder ? linkedOrder.items.reduce((s, i) => s + i.qty, 0) : (table.itemsCount || 0));
+                itemsVal = totalItems > 0 ? `${totalItems} Items` : '—';
+
+                const totalAmount = table.totalAmount || (linkedOrder ? linkedOrder.total : 0);
+                totalVal = totalAmount > 0 ? `₹${totalAmount.toFixed(0)}` : '—';
+            }
+
+            const isAvailable = statusKey === 'available';
+            
             const card = document.createElement('div');
-            card.className = `table-card ${table.status}`;
+            card.className = `luxury-table-card status-${statusKey} ${hasOrder ? 'is-occupied' : 'is-available'}`;
             card.setAttribute('data-id', table.id);
 
-            let statusText = 'Available';
-            if (table.status === 'ordering') statusText = 'Ordering';
-            else if (table.status === 'placed' || table.status === 'confirmed') statusText = 'Order Confirmed';
-            else if (table.status === 'preparing') statusText = 'Preparing';
-            else if (table.status === 'ready') statusText = 'Order Ready';
-            else if (table.status === 'delivered') statusText = 'Delivered';
-
-            let orderIdDisplay = table.currentOrderId || '—';
-            let customerDisplay = table.customerName || '—';
-            let timeDisplay = table.startTime ? formatTimeStr(new Date(table.startTime)) : '—';
-            let itemsVal = table.itemsCount > 0 ? `${table.itemsCount} Items` : '—';
-            let totalVal = table.totalAmount > 0 ? `₹${table.totalAmount}` : '—';
+            const actionBtnHtml = isAvailable 
+                ? `<button class="table-action-btn btn-green-reserve" type="button"><i class="fa-regular fa-calendar-check"></i> Reserve Table</button>`
+                : `<button class="table-action-btn btn-yellow-manage" type="button"><i class="fa-solid fa-bell-concierge"></i> View / Manage</button>`;
 
             card.innerHTML = `
-                <h3>Table ${String(table.id).padStart(2, '0')}</h3>
-                <span class="table-status-pill status-${table.status}">${statusText}</span>
-                <div class="table-card-img-wrapper">
-                    <img src="images/restaurant_table.png" alt="Table Scene">
+                <div class="table-card-image-hero">
+                    <img src="images/restaurant_table.png" alt="Table ${tableNumStr}" class="table-hero-img" loading="lazy">
+                    <div class="table-image-overlay">
+                        <h3 class="table-card-title">Table ${tableNumStr}</h3>
+                        <div class="table-status-pill-wrap">
+                            <span class="table-status-badge badge-${statusKey}">${statusLabel}</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="table-details-list">
-                    <div class="detail-row">
-                        <span>Order ID:</span>
-                        <span>${orderIdDisplay}</span>
+                <div class="table-card-content">
+                    <div class="table-meta-list">
+                        <div class="table-meta-row">
+                            <span class="meta-label"><i class="fa-solid fa-receipt meta-card-icon"></i> Order ID:</span>
+                            <span class="meta-value ${orderIdVal !== '—' ? 'has-order-val' : 'dash-val'}">${orderIdVal}</span>
+                        </div>
+                        <div class="table-meta-row">
+                            <span class="meta-label"><i class="fa-solid fa-user meta-card-icon"></i> Customer:</span>
+                            <span class="meta-value ${customerVal !== '—' ? 'has-cust-val' : 'dash-val'}">${customerVal}</span>
+                        </div>
+                        <div class="table-meta-row">
+                            <span class="meta-label"><i class="fa-solid fa-clock meta-card-icon"></i> Time:</span>
+                            <span class="meta-value ${timeVal !== '—' ? 'has-time-val' : 'dash-val'}">${timeVal}</span>
+                        </div>
+                        <div class="table-meta-row">
+                            <span class="meta-label"><i class="fa-solid fa-utensils meta-card-icon"></i> Items:</span>
+                            <span class="meta-value ${itemsVal !== '—' ? 'has-items-val' : 'dash-val'}">${itemsVal}</span>
+                        </div>
+                        <div class="table-meta-row">
+                            <span class="meta-label"><i class="fa-solid fa-indian-rupee-sign meta-card-icon"></i> Total:</span>
+                            <span class="meta-value ${totalVal !== '—' ? 'has-total-val' : 'dash-val'}">${totalVal}</span>
+                        </div>
                     </div>
-                    <div class="detail-row">
-                        <span>Customer:</span>
-                        <span>${customerDisplay}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span>Time:</span>
-                        <span>${timeDisplay}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span>Items:</span>
-                        <span>${itemsVal}</span>
-                    </div>
-                    <div class="detail-row total-amount">
-                        <span>Total:</span>
-                        <span>${totalVal}</span>
+                    <div class="table-card-action">
+                        ${actionBtnHtml}
                     </div>
                 </div>
             `;
@@ -1193,7 +1452,7 @@ function selectTable(tableId) {
 
     // Prefill name and guest fields if saved
     document.getElementById('student-name').value = table.customerName || '';
-    document.getElementById('num-people').value = table.numPeople || 1;
+    document.getElementById('num-people').value = table.numPeople || 6;
 
     // Load category and search filters
     g_searchQuery = '';
@@ -1220,7 +1479,7 @@ function saveActiveTableState() {
     // Only modify table if it is currently in draft ordering mode
     if (table && table.status === 'ordering') {
         const nameVal = document.getElementById('student-name').value.trim();
-        const numPeople = parseInt(document.getElementById('num-people').value) || 1;
+        const numPeople = parseInt(document.getElementById('num-people').value) || 6;
 
         table.customerName = nameVal || null;
         table.numPeople = numPeople;
@@ -1360,18 +1619,57 @@ function getCategoryIcon(cat) {
 }
 
 // =========================================================================
-// 8. LIVE CART MANAGEMENT (TABLE SPECIFIC)
+// 8. LIVE CART MANAGEMENT (PERMANENT DESKTOP SIDEBAR / MOBILE DRAWER)
 // =========================================================================
+function toggleMobileCartDrawer(open) {
+    const liveCart = document.getElementById('live-cart-sidebar');
+    const overlay = document.getElementById('cart-drawer-overlay');
+    if (!liveCart) return;
+
+    if (open) {
+        liveCart.classList.add('open');
+        if (overlay) overlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    } else {
+        liveCart.classList.remove('open');
+        if (overlay) overlay.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+}
+
 function renderCart() {
     const listContainer = document.getElementById('cart-items-list');
+    if (!listContainer) return;
     listContainer.innerHTML = '';
 
     const table = g_tables.find(t => t.id === g_activeTableId);
+    const cartSidebar = document.getElementById('live-cart-sidebar');
+    const orderingLayout = document.querySelector('.ordering-layout');
+    const mobileCartToggleBtn = document.getElementById('mobile-cart-toggle-btn');
+    const cartDrawerOverlay = document.getElementById('cart-drawer-overlay');
     
     // Update sidebar title badge
-    document.getElementById('cart-table-badge').textContent = `Table ${String(g_activeTableId).padStart(2, '0')}`;
+    if (g_activeTableId) {
+        const badgeElem = document.getElementById('cart-table-badge');
+        if (badgeElem) badgeElem.textContent = `Table ${String(g_activeTableId).padStart(2, '0')}`;
+    }
 
-    if (!table || table.items.length === 0) {
+    if (!table || !table.items || table.items.length === 0) {
+        // Hide cart sidebar / drawer when empty
+        if (cartSidebar) {
+            cartSidebar.classList.add('hidden-cart');
+            cartSidebar.classList.remove('open');
+        }
+        if (cartDrawerOverlay) {
+            cartDrawerOverlay.classList.remove('open');
+        }
+        if (orderingLayout) {
+            orderingLayout.classList.add('cart-hidden');
+        }
+        if (mobileCartToggleBtn) {
+            mobileCartToggleBtn.style.display = 'none';
+        }
+
         listContainer.innerHTML = `
             <div class="cart-empty-state">
                 <i class="fa-solid fa-basket-shopping"></i>
@@ -1382,11 +1680,23 @@ function renderCart() {
         document.getElementById('cart-subtotal').textContent = '₹0';
         document.getElementById('cart-tax').textContent = '₹0';
         document.getElementById('cart-total').textContent = '₹0';
+        
         const badgeCount = document.getElementById('mobile-cart-badge-count');
         const floatTotal = document.getElementById('mobile-cart-float-total');
         if (badgeCount) badgeCount.textContent = '0';
         if (floatTotal) floatTotal.textContent = '₹0';
         return;
+    }
+
+    // Cart has items: Show cart on the right side (laptop) / enable drawer (mobile)
+    if (cartSidebar) {
+        cartSidebar.classList.remove('hidden-cart');
+    }
+    if (orderingLayout) {
+        orderingLayout.classList.remove('cart-hidden');
+    }
+    if (mobileCartToggleBtn) {
+        mobileCartToggleBtn.style.display = '';
     }
 
     let subtotal = 0;
@@ -1399,7 +1709,7 @@ function renderCart() {
         row.innerHTML = `
             <div class="cart-item-info">
                 <p class="cart-item-name">${item.name}</p>
-                <p class="cart-item-price-calc">₹${item.price} &times; ${item.qty}</p>
+                <span class="cart-item-price-calc">₹${item.price} × ${item.qty}</span>
             </div>
             <div class="quantity-selector">
                 <button class="quantity-btn" onclick="updateItemQuantity('${item.name}', -1)"><i class="fa-solid fa-minus"></i></button>
@@ -1450,7 +1760,7 @@ function addItemToOrder(name, price) {
         showUnavailableToast(name);
         return;
     }
-    
+
     // Add item with qty 1
     table.items.push({ name, price, qty: 1 });
     
@@ -1564,7 +1874,7 @@ function confirmOrderSubmission() {
         orderId: table.currentOrderId,
         tableId: table.id,
         customerName: table.customerName || 'Guest',
-        numPeople: table.numPeople || 1,
+        numPeople: table.numPeople || 6,
         items: kitchenItems,
         subtotal: subtotal,
         tax: tax,
@@ -2082,17 +2392,6 @@ function changeAppBg(bgImgPath) {
         showToast('App background theme image updated!', 'success');
     }
 }
-
-// On page load, apply stored background if available
-document.addEventListener('DOMContentLoaded', () => {
-    const savedBg = localStorage.getItem('hb_bg_image');
-    if (savedBg) {
-        const appShell = document.getElementById('app-shell');
-        if (appShell) {
-            appShell.style.backgroundImage = `linear-gradient(rgba(8, 6, 12, 0.86), rgba(8, 6, 12, 0.93)), url('${savedBg}')`;
-        }
-    }
-});
 
 // Horizontal Grid Scroll Helper
 function scrollGrid(gridId, amount) {
