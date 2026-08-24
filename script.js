@@ -574,7 +574,7 @@ function attachEventListeners() {
             otpInput.value = g_currentOTP;
             otpInput.focus();
 
-            showToast(`OTP sent to +91 ${rawPhone}: ${g_currentOTP}`, 'success');
+            showToast(`OTP sent to +91 ${rawPhone} for SY Order Management: ${g_currentOTP}`, 'success');
 
             // Start 30-second countdown timer
             let timeLeft = 30;
@@ -694,7 +694,7 @@ function attachEventListeners() {
 
     // 2. LOGOUT HANDLERS (Settings Page & Navbar Logout)
     const performLogout = () => {
-        openConfirmModal('Logout Session', 'Are you sure you want to log out of the HostelBite system?', false, () => {
+        openConfirmModal('Logout Session', 'Are you sure you want to log out of the SY Order Management system?', false, () => {
             // Save latest state of current user before logging out
             if (Storage.getCurrentUser()) {
                 Storage.saveTables(g_tables);
@@ -2359,7 +2359,7 @@ function resetOrders() {
 function fullReset() {
     openConfirmModal(
         'Full System Reset',
-        'WARNING: This will wipe all tables, orders, counters, and session data, returning HostelBite to a fresh state.',
+        'WARNING: This will wipe all tables, orders, counters, and session data, returning SY Order Management to a fresh state.',
         true,
         () => {
             localStorage.clear();
