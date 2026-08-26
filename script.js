@@ -109,8 +109,8 @@ const Storage = {
     },
     getUserStoragePrefix() {
         const user = this.getCurrentUser();
-        const username = (user && user.username) ? user.username.toLowerCase().replace(/[^a-z0-9]/g, '') : 'guest';
-        return `hb_user_${username}_`;
+        const identifier = (user && (user.uid || user.email || user.username)) ? (user.uid || user.email || user.username).toLowerCase().replace(/[^a-z0-9]/g, '') : 'guest';
+        return `sy_user_${identifier}_`;
     },
     getTables() {
         try {
@@ -211,7 +211,7 @@ const Storage = {
 let g_tables = [];
 let g_orders = [];
 let g_nextOrderIdCounter = 1;
-let g_activeTableId = null; 
+let g_activeTableId = null;
 let g_tableFilter = 'all';
 let g_searchQuery = '';
 let g_selectedCategory = 'active';
@@ -225,41 +225,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Run real-time clock
     startClock();
 
-    // Check if user has an active logged-in session (Persist across page refresh)
-    const currentUser = Storage.getCurrentUser();
+    // Lock website by default until Firebase Auth confirms active session
+    handleUnauthenticatedState();
 
-    if (currentUser) {
-        // Active session found -> Stay on Dashboard/App shell, do NOT redirect to Login
-        document.body.classList.remove('login-active');
-        const appShell = document.getElementById('app-shell');
-        if (appShell) appShell.classList.remove('hidden');
-
-        // Load tables, orders, and counter for the active user
-        g_tables = Storage.getTables();
-        g_orders = Storage.getOrders();
-        g_nextOrderIdCounter = Storage.getNextOrderId();
-        g_cart = [];
-        g_activeTableId = null;
-        g_tableFilter = 'all';
-
-        updateUserUI(currentUser);
-        initMenu();
-        renderCart();
-        renderDashboard();
-        renderHistory();
-
-        showSection('dashboard');
-    } else {
-        // No active session -> Display Login page
-        document.body.classList.add('login-active');
-        const appShell = document.getElementById('app-shell');
-        if (appShell) appShell.classList.add('hidden');
-
-        const phoneForm = document.getElementById('phone-login-form');
-        if (phoneForm) phoneForm.reset();
-        const errorEl = document.getElementById('errorMessage');
-        if (errorEl) errorEl.style.display = 'none';
-    }
+    // Initialize Firebase Auth listener
+    initFirebaseAuthObserver();
 
     // Apply stored background theme if available
     const savedBg = localStorage.getItem('hb_bg_image');
@@ -275,6 +245,57 @@ document.addEventListener('DOMContentLoaded', () => {
     enableDragAndWheelScroll();
 });
 
+// Firebase Auth Observer initializer
+function initFirebaseAuthObserver() {
+    const bindAuthObserver = () => {
+        if (window.FirebaseAuthService && window.FirebaseAuthService.onAuthStateChange) {
+            window.FirebaseAuthService.onAuthStateChange((firebaseUser) => {
+                if (firebaseUser) {
+                    const userObj = {
+                        uid: firebaseUser.uid,
+                        username: firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'Staff Member'),
+                        email: firebaseUser.email || '',
+                        photoURL: firebaseUser.photoURL || '',
+                        staffId: 'SY-' + firebaseUser.uid.substring(0, 5).toUpperCase(),
+                        role: 'Staff Member',
+                        authProvider: firebaseUser.providerData && firebaseUser.providerData[0] ? firebaseUser.providerData[0].providerId : 'Firebase'
+                    };
+                    loginUserSession(userObj, false);
+                } else {
+                    handleUnauthenticatedState();
+                }
+            });
+            return true;
+        }
+        return false;
+    };
+
+    if (!bindAuthObserver()) {
+        window.addEventListener('firebase-ready', () => {
+            bindAuthObserver();
+        }, { once: true });
+    }
+}
+
+// Unauthenticated Locked State Handler
+function handleUnauthenticatedState() {
+    Storage.saveCurrentUser(null);
+
+    // Clear session memory
+    g_tables = [];
+    g_orders = [];
+    g_cart = [];
+    g_activeTableId = null;
+
+    // Lock screen: show login, hide application shell
+    document.body.classList.add('login-active');
+    const appShell = document.getElementById('app-shell');
+    if (appShell) appShell.classList.add('hidden');
+
+    const authForm = document.getElementById('firebase-auth-form');
+    if (authForm) authForm.reset();
+}
+
 // Helper function to update logged in user UI in navbar & dashboard
 function updateUserUI(user) {
     if (!user) return;
@@ -283,13 +304,19 @@ function updateUserUI(user) {
     const userAvatar = document.getElementById('user-avatar');
     const welcomeMsg = document.getElementById('welcome-message');
 
-    if (userDisplay) userDisplay.textContent = `${user.username} (${user.role})`;
+    if (userDisplay) userDisplay.textContent = `${user.username}`;
     if (userRole) userRole.textContent = `ID: ${user.staffId}`;
-    if (userAvatar && user.username) {
-        userAvatar.textContent = user.username.charAt(0).toUpperCase();
-        userAvatar.title = `${user.username} (${user.role}) - ID: ${user.staffId}`;
+    if (userAvatar) {
+        if (user.photoURL) {
+            userAvatar.innerHTML = `<img src="${user.photoURL}" alt="${user.username}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+        } else if (user.username) {
+            userAvatar.textContent = user.username.charAt(0).toUpperCase();
+        }
+        userAvatar.title = `${user.username} (${user.email || user.role}) - ID: ${user.staffId}`;
     }
-    if (welcomeMsg && user.username) welcomeMsg.textContent = `Welcome, ${user.username}! Select a table to start a new food order.`;
+    if (welcomeMsg && user.username) {
+        welcomeMsg.textContent = `Welcome, ${user.username}! Select a table to start a new food order.`;
+    }
 }
 
 // Real-Time System Clock
@@ -300,7 +327,7 @@ function startClock() {
         const optionsDate = { day: 'numeric', month: 'short', year: 'numeric' };
         const dateStr = now.toLocaleDateString('en-GB', optionsDate);
         const timeStr = now.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        
+
         const displayString = `${dateStr}, ${timeStr}`;
         document.getElementById('system-time-display').textContent = displayString;
     };
@@ -346,7 +373,7 @@ function updateSessionBadgeDisplay() {
         else if (session === 'lunch') label = 'Lunch Session (11:30 AM - 3:30 PM)';
         else if (session === 'snacks') label = 'Snacks Session (3:30 PM - 6:30 PM)';
         else if (session === 'dinner') label = 'Dinner Session (6:30 PM - 11:00 PM)';
-        
+
         badge.innerHTML = `<i class="fa-solid fa-clock"></i> ${label}`;
     }
 }
@@ -369,7 +396,7 @@ function showSection(sectionId) {
     if (sectionId === 'ordering') {
         updateSessionBadgeDisplay();
     }
-    
+
     // Hide all view sections
     document.querySelectorAll('.view-section').forEach(sec => {
         sec.classList.remove('active');
@@ -448,7 +475,7 @@ function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    
+
     let iconClass = 'fa-circle-check';
     if (type === 'error') iconClass = 'fa-circle-xmark';
     else if (type === 'warning') iconClass = 'fa-triangle-exclamation';
@@ -473,14 +500,14 @@ function showToast(message, type = 'success') {
 function openConfirmModal(title, message, isDanger, onConfirm) {
     const overlay = document.getElementById('modal-overlay');
     const card = document.getElementById('confirm-modal');
-    
+
     if (document.getElementById('modal-title')) {
         document.getElementById('modal-title').textContent = title || 'Are you sure?';
     }
     if (document.getElementById('modal-message')) {
         document.getElementById('modal-message').textContent = message || 'This action cannot be undone.';
     }
-    
+
     if (card) {
         if (isDanger) {
             card.classList.add('modal-danger');
@@ -499,149 +526,342 @@ function closeConfirmModal() {
     g_modalCallback = null;
 }
 
-// Helper function to complete login and initialize clean session
-function loginUserSession(userObj, successMessage) {
-    // 100% WIPE ALL PAST DATA FOR BRAND NEW WEBSITE SESSION
-    localStorage.clear();
-    sessionStorage.clear();
-
+// Helper function to complete login and initialize user session
+function loginUserSession(userObj, successMessage = null) {
     Storage.saveCurrentUser(userObj);
 
-    // 100% BRAND NEW PRISTINE DEFAULTS (10 Available Tables, 0 Orders, ₹0 Revenue)
-    g_tables = JSON.parse(JSON.stringify(DEFAULT_TABLES));
-    g_orders = [];
-    g_nextOrderIdCounter = 1;
+    // Load tables, orders, and counter for the authenticated user
+    g_tables = Storage.getTables();
+    g_orders = Storage.getOrders();
+    g_nextOrderIdCounter = Storage.getNextOrderId();
     g_cart = [];
     g_activeTableId = null;
     g_tableFilter = 'all';
 
-    Storage.saveTables(g_tables);
-    Storage.saveOrders(g_orders);
-    Storage.saveNextOrderId(1);
-
+    // Unlock application shell
     document.body.classList.remove('login-active');
-    document.getElementById('app-shell').classList.remove('hidden');
-    
+    const appShell = document.getElementById('app-shell');
+    if (appShell) appShell.classList.remove('hidden');
+
     updateUserUI(userObj);
     initMenu();
     renderCart();
     renderDashboard();
     renderHistory();
-    
+
     showSection('dashboard');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
-    showToast(successMessage || `Welcome, ${userObj.username}!`, 'success');
-    
-    const phoneForm = document.getElementById('phone-login-form');
-    if (phoneForm) phoneForm.reset();
+
+    if (successMessage) {
+        showToast(successMessage, 'success');
+    }
+
+    const authForm = document.getElementById('firebase-auth-form');
+    if (authForm) authForm.reset();
 }
 
-let g_currentOTP = null;
-let g_otpTimerInterval = null;
+// Friendly Firebase Error Message Helper
+function getFirebaseErrorMessage(error) {
+    if (!error) return 'Authentication failed. Please try again.';
+    const code = error.code || '';
+    switch (code) {
+        case 'auth/invalid-credential':
+        case 'auth/wrong-password':
+        case 'auth/user-not-found':
+            return 'Invalid email or password. Please check and try again.';
+        case 'auth/email-already-in-use':
+            return 'An account with this email already exists. Please sign in instead.';
+        case 'auth/weak-password':
+            return 'Password is too weak. Please use at least 6 characters.';
+        case 'auth/invalid-email':
+            return 'Please enter a valid email address.';
+        case 'auth/popup-closed-by-user':
+            return 'Google Sign-in was closed before completing.';
+        case 'auth/cancelled-popup-request':
+            return 'Sign-in cancelled due to multiple requests.';
+        case 'auth/network-request-failed':
+            return 'Network error. Please check your internet connection.';
+        case 'auth/user-disabled':
+            return 'This staff account has been disabled. Please contact admin.';
+        case 'auth/too-many-requests':
+            return 'Too many attempts. Please try again in a few minutes.';
+        case 'auth/unauthorized-domain':
+            return 'This domain is not authorized in Firebase. Please open via http://localhost:5500 or add your domain under Firebase Console > Authentication > Settings > Authorized Domains.';
+        default:
+            return error.message || 'Authentication error. Please try again.';
+    }
+}
 
 // =========================================================================
 // 5. ATTACH GENERAL EVENT LISTENERS
 // =========================================================================
 function attachEventListeners() {
+    let currentAuthMode = 'signin'; // 'signin' or 'register'
     const errorEl = document.getElementById('errorMessage');
+    const successEl = document.getElementById('successMessage');
 
-    // 1. GET OTP BUTTON HANDLER
-    const btnGetOtp = document.getElementById('btn-get-otp');
-    const phoneInput = document.getElementById('login-phone');
-    const otpInput = document.getElementById('login-otp');
-    const phoneForm = document.getElementById('phone-login-form');
+    const hideAuthAlerts = () => {
+        if (errorEl) { errorEl.style.display = 'none'; errorEl.textContent = ''; }
+        if (successEl) { successEl.style.display = 'none'; successEl.textContent = ''; }
+    };
 
-    if (btnGetOtp && phoneInput && otpInput) {
-        btnGetOtp.addEventListener('click', () => {
-            const rawPhone = phoneInput.value.replace(/\D/g, '');
-            if (rawPhone.length !== 10) {
-                if (errorEl) {
-                    errorEl.textContent = 'Please enter a valid 10-digit mobile number';
-                    errorEl.style.display = 'block';
-                }
-                showToast('Please enter a valid 10-digit mobile number', 'warning');
-                phoneInput.focus();
+    const showAuthError = (msg) => {
+        if (successEl) successEl.style.display = 'none';
+        if (errorEl) {
+            errorEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${msg}`;
+            errorEl.style.display = 'flex';
+        }
+        showToast(msg, 'error');
+    };
+
+    const showAuthSuccess = (msg) => {
+        if (errorEl) errorEl.style.display = 'none';
+        if (successEl) {
+            successEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${msg}`;
+            successEl.style.display = 'flex';
+        }
+        showToast(msg, 'success');
+    };
+
+    // 1. AUTH MODE TABS (Sign In vs Register)
+    const tabSignIn = document.getElementById('tab-btn-signin');
+    const tabRegister = document.getElementById('tab-btn-register');
+    const nameGroup = document.getElementById('auth-name-group');
+    const confirmPassGroup = document.getElementById('auth-confirm-password-group');
+    const signinOptions = document.getElementById('auth-signin-options');
+    const submitText = document.getElementById('auth-submit-text');
+    const nameInput = document.getElementById('auth-name');
+    const confirmPassInput = document.getElementById('auth-confirm-password');
+
+    const switchAuthMode = (mode) => {
+        currentAuthMode = mode;
+        hideAuthAlerts();
+
+        if (mode === 'register') {
+            if (tabRegister) tabRegister.classList.add('active');
+            if (tabSignIn) tabSignIn.classList.remove('active');
+            if (nameGroup) nameGroup.style.display = 'block';
+            if (confirmPassGroup) confirmPassGroup.style.display = 'block';
+            if (signinOptions) signinOptions.style.display = 'none';
+            if (submitText) submitText.textContent = 'CREATE ACCOUNT';
+            if (nameInput) nameInput.required = true;
+            if (confirmPassInput) confirmPassInput.required = true;
+        } else {
+            if (tabSignIn) tabSignIn.classList.add('active');
+            if (tabRegister) tabRegister.classList.remove('active');
+            if (nameGroup) nameGroup.style.display = 'none';
+            if (confirmPassGroup) confirmPassGroup.style.display = 'none';
+            if (signinOptions) signinOptions.style.display = 'flex';
+            if (submitText) submitText.textContent = 'SIGN IN';
+            if (nameInput) nameInput.required = false;
+            if (confirmPassInput) confirmPassInput.required = false;
+        }
+    };
+
+    if (tabSignIn) tabSignIn.addEventListener('click', () => switchAuthMode('signin'));
+    if (tabRegister) tabRegister.addEventListener('click', () => switchAuthMode('register'));
+
+    // 2. TOGGLE PASSWORD VISIBILITY
+    const togglePassBtn = document.getElementById('toggle-auth-password');
+    const passInput = document.getElementById('auth-password');
+    const eyeIcon = document.getElementById('auth-eye-icon');
+    if (togglePassBtn && passInput) {
+        togglePassBtn.addEventListener('click', () => {
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                if (eyeIcon) eyeIcon.className = 'fa-solid fa-eye-slash';
+            } else {
+                passInput.type = 'password';
+                if (eyeIcon) eyeIcon.className = 'fa-solid fa-eye';
+            }
+        });
+    }
+
+    // 3. FORGOT PASSWORD HANDLER
+    const forgotPassBtn = document.getElementById('btn-forgot-password');
+    if (forgotPassBtn) {
+        forgotPassBtn.addEventListener('click', async () => {
+            const emailInput = document.getElementById('auth-email');
+            const email = emailInput ? emailInput.value.trim() : '';
+
+            if (!email) {
+                showAuthError('Please enter your email address above to reset password');
+                if (emailInput) emailInput.focus();
                 return;
             }
 
-            if (errorEl) errorEl.style.display = 'none';
+            if (!window.FirebaseAuthService) {
+                showAuthError('Authentication service is still initializing. Please wait a moment.');
+                return;
+            }
 
-            // Generate 4-digit OTP
-            g_currentOTP = Math.floor(1000 + Math.random() * 9000).toString();
-            
-            // Auto-fill for instant convenience
-            otpInput.value = g_currentOTP;
-            otpInput.focus();
+            try {
+                forgotPassBtn.disabled = true;
+                await window.FirebaseAuthService.resetPassword(email);
+                showAuthSuccess(`Password reset email sent to ${email}. Check your inbox!`);
+            } catch (err) {
+                console.error('Password reset error:', err);
+                showAuthError(getFirebaseErrorMessage(err));
+            } finally {
+                forgotPassBtn.disabled = false;
+            }
+        });
+    }
 
-            showToast(`OTP sent to +91 ${rawPhone} for SY Order Management: ${g_currentOTP}`, 'success');
+    // 4. FIREBASE AUTH FORM SUBMISSION (Sign In / Register)
+    const authForm = document.getElementById('firebase-auth-form');
+    const submitBtn = document.getElementById('btn-auth-submit');
+    if (authForm) {
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideAuthAlerts();
 
-            // Start 30-second countdown timer
-            let timeLeft = 30;
-            btnGetOtp.disabled = true;
-            btnGetOtp.textContent = `${timeLeft}s`;
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
 
-            if (g_otpTimerInterval) clearInterval(g_otpTimerInterval);
-            g_otpTimerInterval = setInterval(() => {
-                timeLeft--;
-                if (timeLeft <= 0) {
-                    clearInterval(g_otpTimerInterval);
-                    btnGetOtp.disabled = false;
-                    btnGetOtp.textContent = 'GET OTP';
+            if (!email || !password) {
+                showAuthError('Please enter both email and password');
+                return;
+            }
+
+            if (password.length < 6) {
+                showAuthError('Password must be at least 6 characters long');
+                return;
+            }
+
+            if (!window.FirebaseAuthService) {
+                showAuthError('Authentication service is loading. Please try again in a few seconds.');
+                return;
+            }
+
+            // Set loading state on submit button
+            const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<span><i class="fa-solid fa-circle-notch fa-spin"></i> Processing...</span>`;
+            }
+
+            try {
+                if (currentAuthMode === 'register') {
+                    const fullName = nameInput ? nameInput.value.trim() : '';
+                    const confirmPass = confirmPassInput ? confirmPassInput.value : '';
+
+                    if (password !== confirmPass) {
+                        showAuthError('Passwords do not match. Please re-enter.');
+                        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = originalBtnHtml; }
+                        return;
+                    }
+
+                    await window.FirebaseAuthService.registerWithEmail(email, password, fullName);
+                    showToast(`Account created successfully! Welcome, ${fullName || email}!`, 'success');
                 } else {
-                    btnGetOtp.textContent = `${timeLeft}s`;
+                    await window.FirebaseAuthService.signInWithEmail(email, password);
+                    showToast('Signed in successfully with Firebase!', 'success');
+                }
+            } catch (err) {
+                console.error('Firebase Auth Error:', err);
+                showAuthError(getFirebaseErrorMessage(err));
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnHtml;
+                }
+            }
+        });
+    }
+
+    // 4b. PHONE OTP LOGIN FORM HANDLER
+    const phoneForm = document.getElementById('phone-login-form');
+    const getOtpBtn = document.getElementById('btn-get-otp');
+    const otpTimerDisplay = document.getElementById('otp-timer-display');
+    let generatedOtp = null;
+    let otpCountdown = null;
+
+    if (getOtpBtn) {
+        getOtpBtn.addEventListener('click', () => {
+            const phoneInput = document.getElementById('login-phone');
+            const phone = phoneInput ? phoneInput.value.trim() : '';
+
+            if (!phone || phone.length < 10) {
+                showAuthError('Please enter a valid 10-digit mobile number');
+                if (phoneInput) phoneInput.focus();
+                return;
+            }
+
+            hideAuthAlerts();
+            // Generate 4-digit demo OTP
+            generatedOtp = '1234';
+            const otpInput = document.getElementById('login-otp');
+            if (otpInput) {
+                otpInput.value = generatedOtp;
+                otpInput.focus();
+            }
+
+            showAuthSuccess(`Demo OTP sent: ${generatedOtp} (auto-filled for quick login)`);
+            getOtpBtn.disabled = true;
+            let timeLeft = 30;
+            if (otpTimerDisplay) otpTimerDisplay.textContent = `(${timeLeft}s)`;
+
+            if (otpCountdown) clearInterval(otpCountdown);
+            otpCountdown = setInterval(() => {
+                timeLeft--;
+                if (otpTimerDisplay) otpTimerDisplay.textContent = `(${timeLeft}s)`;
+                if (timeLeft <= 0) {
+                    clearInterval(otpCountdown);
+                    getOtpBtn.disabled = false;
+                    if (otpTimerDisplay) otpTimerDisplay.textContent = '';
                 }
             }, 1000);
         });
     }
 
-    // 2. PHONE OTP LOGIN FORM SUBMISSION
     if (phoneForm) {
         phoneForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const rawPhone = phoneInput.value.replace(/\D/g, '');
-            const enteredOtp = otpInput.value.trim();
+            hideAuthAlerts();
 
-            if (rawPhone.length !== 10) {
-                if (errorEl) {
-                    errorEl.textContent = 'Please enter a valid 10-digit mobile number';
-                    errorEl.style.display = 'block';
-                }
-                showToast('Please enter a valid 10-digit mobile number', 'warning');
+            const phoneInput = document.getElementById('login-phone');
+            const otpInput = document.getElementById('login-otp');
+            const phone = phoneInput ? phoneInput.value.trim() : '';
+            const otp = otpInput ? otpInput.value.trim() : '';
+
+            if (!phone || phone.length < 10) {
+                showAuthError('Please enter a valid 10-digit mobile number');
                 return;
             }
 
-            if (!enteredOtp || (g_currentOTP && enteredOtp !== g_currentOTP && enteredOtp !== '1234')) {
-                if (errorEl) {
-                    errorEl.textContent = 'Invalid OTP. Please enter the correct code';
-                    errorEl.style.display = 'block';
-                }
-                showToast('Invalid OTP. Please enter the correct code', 'error');
+            if (!otp) {
+                showAuthError('Please enter the OTP or click GET OTP');
                 return;
             }
-
-            if (errorEl) errorEl.style.display = 'none';
 
             const userObj = {
-                username: `Staff (+91 ${rawPhone.slice(0, 5)} ${rawPhone.slice(5)})`,
-                phone: `+91 ${rawPhone}`,
-                staffId: 'PH-' + rawPhone.slice(-4),
-                role: 'Canteen Staff',
+                uid: 'ph_' + phone,
+                username: `Staff (+91 ${phone.substring(0, 5)}...)`,
+                email: '',
+                phone: '+91' + phone,
+                staffId: 'ST-' + phone.slice(-4),
+                role: 'Staff Member',
                 authProvider: 'Phone OTP'
             };
 
-            loginUserSession(userObj, `Welcome, ${userObj.username}! Signed in with Phone OTP.`);
+            loginUserSession(userObj, 'Logged in successfully with Mobile Number!');
         });
     }
 
-    // 2. CONTINUE WITH GOOGLE AUTHENTICATION HANDLER
+    // 5. CONTINUE WITH GOOGLE AUTHENTICATION HANDLER
     const googleBtn = document.getElementById('btn-google-login');
     if (googleBtn) {
-        googleBtn.addEventListener('click', () => {
-            const errorEl = document.getElementById('errorMessage');
-            if (errorEl) errorEl.style.display = 'none';
+        googleBtn.addEventListener('click', async () => {
+            hideAuthAlerts();
+
+            if (!window.FirebaseAuthService) {
+                showAuthError('Authentication service is loading. Please try again in a few seconds.');
+                return;
+            }
 
             // Set button loading state
+            googleBtn.disabled = true;
             googleBtn.classList.add('is-loading');
             const originalContent = googleBtn.innerHTML;
             googleBtn.innerHTML = `
@@ -649,52 +869,26 @@ function attachEventListeners() {
                 <span class="google-btn-text">Connecting to Google...</span>
             `;
 
-            // Google OAuth Verification & Sign-in Handshake
-            setTimeout(() => {
-                try {
-                    const googleUser = {
-                        username: 'Google User',
-                        staffId: 'GGL-' + Math.floor(1000 + Math.random() * 9000),
-                        role: 'Canteen Staff',
-                        authProvider: 'Google',
-                        email: 'staff.hostelbite@gmail.com'
-                    };
-
-                    loginUserSession(googleUser, `Welcome, ${googleUser.username}! Successfully signed in with Google.`);
-                } catch (err) {
-                    console.error('Google Sign-in Error:', err);
-                    if (errorEl) {
-                        errorEl.textContent = 'Google authentication failed. Please try again.';
-                        errorEl.style.display = 'block';
-                    }
-                    showToast('Google authentication failed. Please try again.', 'error');
-                } finally {
-                    googleBtn.classList.remove('is-loading');
-                    googleBtn.innerHTML = originalContent;
+            try {
+                const userCred = await window.FirebaseAuthService.signInWithGoogle();
+                const u = userCred.user;
+                showToast(`Welcome, ${u.displayName || u.email}! Signed in with Google.`, 'success');
+            } catch (err) {
+                console.error('Google Sign-in Error:', err);
+                if (err.code !== 'auth/popup-closed-by-user') {
+                    showAuthError(getFirebaseErrorMessage(err));
                 }
-            }, 600);
-        });
-    }
-
-    // Toggle password view
-    const togglePassBtn = document.getElementById('toggle-password');
-    if (togglePassBtn) {
-        togglePassBtn.addEventListener('click', () => {
-            const passInput = document.getElementById('password');
-            const eyeIcon = document.getElementById('eye-icon');
-            if (passInput.type === 'password') {
-                passInput.type = 'text';
-                eyeIcon.className = 'fa-solid fa-eye-slash';
-            } else {
-                passInput.type = 'password';
-                eyeIcon.className = 'fa-solid fa-eye';
+            } finally {
+                googleBtn.disabled = false;
+                googleBtn.classList.remove('is-loading');
+                googleBtn.innerHTML = originalContent;
             }
         });
     }
 
-    // 2. LOGOUT HANDLERS (Settings Page & Navbar Logout)
+    // 6. LOGOUT HANDLERS (Settings Page & Navbar Logout)
     const performLogout = () => {
-        openConfirmModal('Logout Session', 'Are you sure you want to log out of the SY Order Management system?', false, () => {
+        openConfirmModal('Logout Session', 'Are you sure you want to log out of the SY Order Management system?', false, async () => {
             // Save latest state of current user before logging out
             if (Storage.getCurrentUser()) {
                 Storage.saveTables(g_tables);
@@ -702,26 +896,16 @@ function attachEventListeners() {
                 Storage.saveNextOrderId(g_nextOrderIdCounter);
             }
 
-            // Clear current active user session
-            Storage.saveCurrentUser(null);
+            try {
+                if (window.FirebaseAuthService) {
+                    await window.FirebaseAuthService.logout();
+                }
+            } catch (err) {
+                console.warn('Firebase logout notice:', err);
+            }
 
-            // Clear temporary in-memory session data
-            g_tables = [];
-            g_orders = [];
-            g_cart = [];
-            g_activeTableId = null;
-            g_nextOrderIdCounter = 1;
-
-            // Return to Login Page
-            document.body.classList.add('login-active');
-            document.getElementById('app-shell').classList.add('hidden');
-
-            const errorEl = document.getElementById('errorMessage');
-            if (errorEl) errorEl.style.display = 'none';
-
-            const phoneForm = document.getElementById('phone-login-form');
-            if (phoneForm) phoneForm.reset();
-
+            // Reset local session & lock UI
+            handleUnauthenticatedState();
             closeConfirmModal();
             showToast('Logged out successfully. Your session data has been saved.', 'info');
         });
@@ -851,7 +1035,7 @@ function attachEventListeners() {
             table.items = [];
             table.itemsCount = 0;
             table.totalAmount = 0;
-            
+
             // If they clear the cart, it does not mean they cancel the student name if entered, but let's reset status
             table.status = 'available';
             table.currentOrderId = null;
@@ -1208,7 +1392,7 @@ function renderDashboard() {
 
             if (hasOrder) {
                 orderIdVal = table.currentOrderId || (linkedOrder ? linkedOrder.orderId : `#ORD-${1024 + table.id}`);
-                
+
                 const custName = table.customerName || (linkedOrder ? linkedOrder.customerName : '');
                 customerVal = custName ? custName : '—';
 
@@ -1224,7 +1408,7 @@ function renderDashboard() {
                     }
                 }
 
-                const totalItems = (table.items && table.items.length > 0) 
+                const totalItems = (table.items && table.items.length > 0)
                     ? table.items.reduce((s, i) => s + i.qty, 0)
                     : (linkedOrder ? linkedOrder.items.reduce((s, i) => s + i.qty, 0) : (table.itemsCount || 0));
                 itemsVal = totalItems > 0 ? `${totalItems} Items` : '—';
@@ -1234,12 +1418,12 @@ function renderDashboard() {
             }
 
             const isAvailable = statusKey === 'available';
-            
+
             const card = document.createElement('div');
             card.className = `luxury-table-card status-${statusKey} ${hasOrder ? 'is-occupied' : 'is-available'}`;
             card.setAttribute('data-id', table.id);
 
-            const actionBtnHtml = isAvailable 
+            const actionBtnHtml = isAvailable
                 ? `<button class="table-action-btn btn-green-reserve" type="button"><i class="fa-regular fa-calendar-check"></i> Reserve Table</button>`
                 : `<button class="table-action-btn btn-yellow-manage" type="button"><i class="fa-solid fa-bell-concierge"></i> View / Manage</button>`;
 
@@ -1318,8 +1502,8 @@ function renderDashboardFoodGrid() {
         const vegIcon = item.isVeg ? 'fa-circle' : 'fa-play';
         const vegText = item.isVeg ? 'VEG' : 'NON-VEG';
 
-        const imgMarkup = item.image 
-            ? `<img src="${item.image}" alt="${item.name}" class="food-img" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop';">` 
+        const imgMarkup = item.image
+            ? `<img src="${item.image}" alt="${item.name}" class="food-img" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop';">`
             : `<div class="food-img-placeholder"><i class="fa-solid ${getCategoryIcon(item.category)}"></i></div>`;
 
         let actionBtnHtml = '';
@@ -1357,15 +1541,15 @@ function scrollDashFoodRow(amount) {
 // Automatically select the next available table sequentially (e.g. Table 1 -> Table 2 -> Table 3)
 function selectNextAvailableTable() {
     const currentId = g_activeTableId || 0;
-    
+
     // Find next available table after current active table ID
     let nextTable = g_tables.find(t => t.id > currentId && (t.status === 'available' || t.status === 'ordering'));
-    
+
     // If none found after current ID, wrap around starting from Table 1
     if (!nextTable) {
         nextTable = g_tables.find(t => (t.status === 'available' || t.status === 'ordering'));
     }
-    
+
     if (nextTable) {
         g_activeTableId = nextTable.id;
     }
@@ -1383,13 +1567,13 @@ function quickOrderFromDash(name, price) {
     }
 
     let table = g_tables.find(t => t.id === g_activeTableId);
-    
+
     // If no active table OR active table is locked/confirmed, auto-advance to next available table (Table 2, 3...)
     if (!table || (table.status !== 'available' && table.status !== 'ordering')) {
         selectNextAvailableTable();
         table = g_tables.find(t => t.id === g_activeTableId);
     }
-    
+
     if (table) {
         if (table.status === 'available') {
             table.status = 'ordering';
@@ -1433,7 +1617,7 @@ function selectTable(tableId) {
 
     // Set header details
     document.getElementById('order-table-title').textContent = `Table ${String(tableId).padStart(2, '0')}`;
-    
+
     // Generate Order ID if empty (for fresh available tables)
     if (!table.currentOrderId) {
         table.currentOrderId = generateNewOrderId();
@@ -1443,7 +1627,7 @@ function selectTable(tableId) {
     }
 
     document.getElementById('order-id-display').textContent = table.currentOrderId;
-    
+
     // Format timestamp
     const startD = new Date(table.startTime);
     document.getElementById('order-timestamp-display').innerHTML = `
@@ -1459,7 +1643,7 @@ function selectTable(tableId) {
     g_selectedCategory = 'active';
     document.getElementById('food-search-input').value = '';
     document.getElementById('clear-search-btn').style.display = 'none';
-    
+
     document.querySelectorAll('.category-tab').forEach(t => {
         if (t.getAttribute('data-category') === 'active') t.classList.add('active');
         else t.classList.remove('active');
@@ -1475,7 +1659,7 @@ function selectTable(tableId) {
 function saveActiveTableState() {
     if (!g_activeTableId) return;
     const table = g_tables.find(t => t.id === g_activeTableId);
-    
+
     // Only modify table if it is currently in draft ordering mode
     if (table && table.status === 'ordering') {
         const nameVal = document.getElementById('student-name').value.trim();
@@ -1490,7 +1674,7 @@ function saveActiveTableState() {
             table.currentOrderId = null;
             table.startTime = null;
         }
-        
+
         Storage.saveTables(g_tables);
     }
 }
@@ -1516,10 +1700,10 @@ function renderMenu() {
         const filtered = FOOD_MENU.filter(item => {
             const matchesCat = item.category === cat;
             const matchesSearch = item.name.toLowerCase().includes(g_searchQuery);
-            
+
             let matchesTab = false;
             const activeSession = getActiveSessionByTime();
-            
+
             if (g_selectedCategory === 'all') {
                 matchesTab = true;
             } else if (g_selectedCategory === 'active') {
@@ -1530,7 +1714,7 @@ function renderMenu() {
                 // breakfast, lunch, snacks, dinner
                 matchesTab = item.timings && item.timings.includes(g_selectedCategory);
             }
-            
+
             return matchesCat && matchesSearch && matchesTab;
         });
 
@@ -1560,8 +1744,8 @@ function renderMenu() {
             const vegIcon = item.isVeg ? 'fa-circle' : 'fa-play';
             const vegText = item.isVeg ? 'VEG' : 'NON-VEG';
 
-            const imgMarkup = item.image 
-                ? `<img src="${item.image}" alt="${item.name}" class="food-img" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop';">` 
+            const imgMarkup = item.image
+                ? `<img src="${item.image}" alt="${item.name}" class="food-img" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop';">`
                 : `<div class="food-img-placeholder"><i class="fa-solid ${getCategoryIcon(item.category)}"></i></div>`;
 
             let actionBtnHtml = '';
@@ -1647,7 +1831,7 @@ function renderCart() {
     const orderingLayout = document.querySelector('.ordering-layout');
     const mobileCartToggleBtn = document.getElementById('mobile-cart-toggle-btn');
     const cartDrawerOverlay = document.getElementById('cart-drawer-overlay');
-    
+
     // Update sidebar title badge
     if (g_activeTableId) {
         const badgeElem = document.getElementById('cart-table-badge');
@@ -1680,7 +1864,7 @@ function renderCart() {
         document.getElementById('cart-subtotal').textContent = '₹0';
         document.getElementById('cart-tax').textContent = '₹0';
         document.getElementById('cart-total').textContent = '₹0';
-        
+
         const badgeCount = document.getElementById('mobile-cart-badge-count');
         const floatTotal = document.getElementById('mobile-cart-float-total');
         if (badgeCount) badgeCount.textContent = '0';
@@ -1734,7 +1918,7 @@ function renderCart() {
     document.getElementById('cart-subtotal').textContent = `₹${subtotal}`;
     document.getElementById('cart-tax').textContent = `₹${tax}`;
     document.getElementById('cart-total').textContent = `₹${grandTotal}`;
-    
+
     // Update floating mobile cart badge & total
     const badgeCount = document.getElementById('mobile-cart-badge-count');
     const floatTotal = document.getElementById('mobile-cart-float-total');
@@ -1754,7 +1938,7 @@ function addItemToOrder(name, price) {
 
     const item = FOOD_MENU.find(i => i.name === name);
     const activeSession = getActiveSessionByTime();
-    
+
     // Strict session validation: Cannot add items outside active session
     if (item && item.timings && !item.timings.includes(activeSession)) {
         showUnavailableToast(name);
@@ -1763,7 +1947,7 @@ function addItemToOrder(name, price) {
 
     // Add item with qty 1
     table.items.push({ name, price, qty: 1 });
-    
+
     // Update state
     renderCart();
     renderMenu();
@@ -1857,7 +2041,7 @@ function confirmOrderSubmission() {
         generateInvoice(table.currentOrderId);
         return;
     }
-    
+
     // Prepare order item statuses
     const kitchenItems = table.items.map(item => ({
         name: item.name,
@@ -1899,7 +2083,7 @@ function confirmOrderSubmission() {
     Storage.saveTables(g_tables);
 
     showToast(`Order ${newOrder.orderId} confirmed and sent to Kitchen! Table ${String(table.id).padStart(2, '0')} is now locked.`, 'success');
-    
+
     // Clear active table pointer so other tables remain completely unaffected
     g_activeTableId = null;
 
@@ -1984,7 +2168,7 @@ function cycleKitchenItemStatus(orderId, itemIndex) {
     if (item.status === 'ordered') {
         nextStatus = 'preparing';
         order.status = 'preparing';
-        
+
         // Update active table state status
         const table = g_tables.find(t => t.id === order.tableId);
         if (table && table.currentOrderId === orderId) {
@@ -1993,7 +2177,7 @@ function cycleKitchenItemStatus(orderId, itemIndex) {
         }
     } else if (item.status === 'preparing') {
         nextStatus = 'ready';
-        
+
         // If first ready or overall ready check
         let allReady = order.items.every(i => i.status === 'ready' || i.name === item.name); // simulated state check
         if (allReady) order.status = 'ready';
@@ -2006,18 +2190,18 @@ function cycleKitchenItemStatus(orderId, itemIndex) {
 
     // Check if order state has overall updates
     const allStatuses = order.items.map(i => i.status);
-    
+
     // Overall Order status logic
     if (allStatuses.every(s => s === 'served')) {
         order.status = 'ready'; // ready for delivery checkout
-        
+
         // Update table card details
         const table = g_tables.find(t => t.id === order.tableId);
         if (table && table.currentOrderId === orderId) {
             table.status = 'ready';
             Storage.saveTables(g_tables);
         }
-        
+
         // Trigger Served Completion Page
         openServedCompletionPage(order);
     } else if (allStatuses.some(s => s === 'preparing')) {
@@ -2031,7 +2215,7 @@ function cycleKitchenItemStatus(orderId, itemIndex) {
 // Display completion celebration page
 function openServedCompletionPage(order) {
     g_activeTableId = order.tableId; // Anchor active table context
-    
+
     document.getElementById('served-table-display').textContent = `Table ${String(order.tableId).padStart(2, '0')}`;
     document.getElementById('served-order-display').textContent = order.orderId;
     document.getElementById('served-name-display').textContent = order.customerName;
@@ -2105,7 +2289,7 @@ function generateInvoice(orderId) {
 function updateLifecycleTracker(order) {
     const steps = ['placed', 'preparing', 'ready', 'delivered', 'paid'];
     let currentStepIndex = steps.indexOf(order.status);
-    
+
     if (order.paymentStatus === 'paid') {
         currentStepIndex = steps.indexOf('paid');
     }
@@ -2142,7 +2326,7 @@ function markOrderPaid(orderId) {
     if (!order) return;
 
     order.paymentStatus = 'paid';
-    
+
     // Automatically transition order status to delivered if paid
     if (order.status === 'ready') {
         order.status = 'delivered';
@@ -2187,11 +2371,11 @@ function releaseTable(tableId) {
     table.itemsCount = 0;
     table.totalAmount = 0;
     table.startTime = null;
-    
+
     if (g_activeTableId === tableId) {
         g_activeTableId = null;
     }
-    
+
     Storage.saveTables(g_tables);
 
     showToast(`Table ${String(tableId).padStart(2, '0')} released! Status is now AVAILABLE.`, 'success');
@@ -2224,7 +2408,7 @@ function renderHistory() {
     const filteredOrders = g_orders.filter(order => {
         // Table filter check
         if (tableFilter !== 'all' && order.tableId !== parseInt(tableFilter)) return false;
-        
+
         // Status filter check
         if (statusFilter !== 'all') {
             if (statusFilter === 'paid') {
@@ -2261,10 +2445,10 @@ function renderHistory() {
 
     filteredOrders.forEach(order => {
         const tr = document.createElement('tr');
-        
+
         const createdD = new Date(order.createdAt);
-        const datetimeStr = createdD.toLocaleString('en-GB', { 
-            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' 
+        const datetimeStr = createdD.toLocaleString('en-GB', {
+            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
         });
 
         const totalItems = order.items.reduce((sum, item) => sum + item.qty, 0);
@@ -2364,7 +2548,7 @@ function fullReset() {
         () => {
             localStorage.clear();
             sessionStorage.clear();
-            
+
             g_tables = JSON.parse(JSON.stringify(DEFAULT_TABLES));
             g_orders = [];
             g_nextOrderIdCounter = 1;
@@ -2375,7 +2559,7 @@ function fullReset() {
 
             closeConfirmModal();
             showToast('System Reset Completed. Re-initializing...', 'success');
-            
+
             setTimeout(() => {
                 location.reload();
             }, 1000);

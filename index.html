@@ -37,47 +37,21 @@
                         <span class="divider-text">LOGIN</span>
                     </div>
                 </div>
-                
-                <div id="errorMessage" class="error" style="display: none;">Invalid credentials</div>
-                
-                <!-- PHONE OTP LOGIN FORM -->
-                <form id="phone-login-form" class="login-form">
-                    <div class="form-group">
-                        <div class="phone-input-wrapper input-icon-wrapper">
-                            <span class="country-prefix"><i class="fa-solid fa-phone"></i> +91</span>
-                            <input type="tel" id="login-phone" placeholder="10-Digit Mobile Number" maxlength="10" autocomplete="tel" required>
-                            <button type="button" id="btn-get-otp" class="btn-get-otp">GET OTP</button>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group otp-group" id="otp-group-wrapper">
-                        <div class="input-icon-wrapper">
-                            <i class="fa-solid fa-shield-halved input-icon"></i>
-                            <input type="text" id="login-otp" placeholder="Enter 4-Digit OTP" maxlength="6" autocomplete="one-time-code" required>
-                            <span id="otp-timer-display" class="otp-timer-display"></span>
-                        </div>
-                    </div>
-                    
-                    <button type="submit" class="btn login-btn luxury-btn" id="btn-otp-verify-submit">
-                        <span>VERIFY & LOGIN</span>
-                    </button>
-                </form>
-                
-                <div class="auth-divider">
-                    <span class="divider-line"></span>
-                    <span class="divider-label">or</span>
-                    <span class="divider-line"></span>
-                </div>
+                <!-- Alerts -->
+                <div id="errorMessage" class="error-banner" style="display: none;"></div>
+                <div id="successMessage" class="success-banner" style="display: none;"></div>
 
-                <button type="button" class="google-login-btn" id="btn-google-login">
-                    <svg class="google-logo-svg" viewBox="0 0 24 24" width="20" height="20">
-                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
-                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
-                        <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-                    </svg>
-                    <span class="google-btn-text">Continue with Google</span>
-                </button>
+                <div class="google-auth-section" style="margin: 20px 0 10px;">
+                    <button type="button" class="google-login-btn" id="btn-google-login">
+                        <svg class="google-logo-svg" viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                            <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                        </svg>
+                        <span class="google-btn-text">Continue with Google</span>
+                    </button>
+                </div>
                 
                 <div class="login-footer luxury-footer">
                     <p><i class="fa-solid fa-shield-halved"></i> Secure Login</p>
@@ -939,6 +913,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Firebase SDK & Auth Integration Module -->
+    <script type="module" src="firebase-config.js"></script>
 
     <!-- Main JavaScript Logic -->
     <script src="script.js"></script>
