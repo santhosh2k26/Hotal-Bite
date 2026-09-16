@@ -136,6 +136,25 @@ const Storage = {
         try {
             const prefix = this.getUserStoragePrefix();
             localStorage.setItem(prefix + 'tables', JSON.stringify(tables));
+            
+            // Real-time Cloud Firestore Sync
+            if (window.FirebaseDB && window.FirebaseDB.db && window.FirebaseDB.setDoc && window.FirebaseDB.doc) {
+                const cleanTables = tables.map(t => ({
+                    id: t.id,
+                    status: t.status,
+                    currentOrderId: t.currentOrderId || null,
+                    customerName: t.customerName || null,
+                    numPeople: t.numPeople || null,
+                    items: t.items || [],
+                    itemsCount: t.itemsCount || 0,
+                    totalAmount: t.totalAmount || 0,
+                    startTime: t.startTime || null
+                }));
+                window.FirebaseDB.setDoc(window.FirebaseDB.doc(window.FirebaseDB.db, "tables_state", prefix.replace(/_$/, '') || 'default'), {
+                    tables: cleanTables,
+                    updatedAt: new Date().toISOString()
+                }).catch(err => console.warn("[Firestore] Table sync warning:", err));
+            }
         } catch (e) {
             console.error("Failed to save user tables to storage:", e);
         }
@@ -164,6 +183,15 @@ const Storage = {
         try {
             const prefix = this.getUserStoragePrefix();
             localStorage.setItem(prefix + 'orders', JSON.stringify(orders));
+
+            // Real-time Cloud Firestore Sync
+            if (window.FirebaseDB && window.FirebaseDB.db && window.FirebaseDB.setDoc && window.FirebaseDB.doc) {
+                window.FirebaseDB.setDoc(window.FirebaseDB.doc(window.FirebaseDB.db, "orders_state", prefix.replace(/_$/, '') || 'default'), {
+                    orders: orders,
+                    totalOrders: orders.length,
+                    updatedAt: new Date().toISOString()
+                }).catch(err => console.warn("[Firestore] Orders sync warning:", err));
+            }
         } catch (e) {
             console.error("Failed to save user orders to storage:", e);
         }
@@ -2073,6 +2101,18 @@ function confirmOrderSubmission() {
     g_orders.push(newOrder);
     Storage.saveOrders(g_orders);
 
+    // Save order directly into Firestore 'orders' collection
+    if (window.FirebaseDB && window.FirebaseDB.db && window.FirebaseDB.setDoc && window.FirebaseDB.doc) {
+        window.FirebaseDB.setDoc(window.FirebaseDB.doc(window.FirebaseDB.db, "orders", newOrder.orderId), {
+            ...newOrder,
+            updatedAt: new Date().toISOString()
+        }).then(() => {
+            console.log("[Firestore] Order saved successfully:", newOrder.orderId);
+        }).catch(err => {
+            console.warn("[Firestore] Order direct save warning:", err);
+        });
+    }
+
     // Save order ID counter increments
     g_nextOrderIdCounter++;
     Storage.saveNextOrderId(g_nextOrderIdCounter);
@@ -2333,6 +2373,17 @@ function markOrderPaid(orderId) {
     }
 
     Storage.saveOrders(g_orders);
+
+    // Sync paid status to Firestore
+    if (window.FirebaseDB && window.FirebaseDB.db && window.FirebaseDB.setDoc && window.FirebaseDB.doc) {
+        window.FirebaseDB.setDoc(window.FirebaseDB.doc(window.FirebaseDB.db, "orders", orderId), {
+            ...order,
+            paymentStatus: 'paid',
+            status: order.status,
+            paidAt: new Date().toISOString()
+        }, { merge: true }).catch(err => console.warn("[Firestore] Order paid update warning:", err));
+    }
+
     showToast(`Order ${orderId} marked as Paid!`, 'success');
 
     // Update active table reference status
